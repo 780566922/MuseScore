@@ -55,7 +55,7 @@ static constexpr qreal SCROLL_LIMIT_OFF_OVERSCROLL_FACTOR = 0.75;
 
 //! NOTE Kept in step with the formats the decoder understands, which is also
 //! what the "Attach an audio file" dialog offers.
-static const QStringList AUDIO_CLIP_SUFFIXES = { "wav", "wave", "ogg", "oga", "flac", "mp3" };
+static const QStringList AUDIO_CLIP_SUFFIXES = { "wav", "wave", "ogg", "oga", "flac", "m4a", "mp3" };
 
 static bool isAudioClipFile(const QUrl& url)
 {

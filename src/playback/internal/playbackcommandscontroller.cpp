@@ -119,7 +119,7 @@ void PlaybackCommandsController::init()
 //! Formats the decoder is able to make sense of; used both to pick a file and
 //! to tell whether a file dropped onto the score is one we can play.
 static const std::vector<std::string> audioClipFileFilters = {
-    "*.wav", "*.wave", "*.ogg", "*.oga", "*.flac", "*.mp3"
+    "*.wav", "*.wave", "*.ogg", "*.oga", "*.flac", "*.m4a", "*.mp3"
 };
 
 muse::Ret PlaybackCommandsController::attachAudioClip(const muse::rcommand::Params& params)
