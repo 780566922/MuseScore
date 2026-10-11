@@ -33,12 +33,15 @@
 
 #include "engraving/dom/factory.h"
 #include "engraving/dom/masterscore.h"
+#include "engraving/dom/measure.h"
 #include "engraving/dom/stafftext.h"
 #include "engraving/dom/utils.h"
 
+#include "notation/iaudioclipwaveprovider.h"
 #include "notation/iexcerptnotation.h" // IWYU pragma: keep
 #include "notation/imasternotation.h"
 #include "notation/inotationautomation.h"
+#include "notation/inotationelements.h"
 #include "notation/inotationinteraction.h"
 #include "notation/inotationnoteinput.h" // IWYU pragma: keep
 #include "notation/inotationparts.h"
@@ -1626,6 +1629,105 @@ bool PlaybackController::hasAudioClip() const
     return audioSettings() && audioSettings()->audioClip().isValid();
 }
 
+void PlaybackController::moveAudioClip(int startTick)
+{
+    if (!audioSettings() || !audioClipResolver() || !notationPlayback()) {
+        return;
+    }
+
+    mu::project::AudioClipInfo clip = audioSettings()->audioClip();
+    if (!clip.isValid()) {
+        return;
+    }
+
+    const mu::notation::INotationPlaybackPtr playback = notationPlayback();
+    const AudioResourceId resourceId = clip.fileName.toStdString();
+
+    AudioClipEnvelope envelope;
+    if (!audioClipResolver()->clipEnvelope(resourceId, clip.inOffset, clip.outOffset, 1, envelope)) {
+        return;
+    }
+
+    //! NOTE The clip has to be moved in seconds, because a position before the
+    //! beginning of the score is not something ticks can express.
+    const double startSec = playedTickToSecs(clip.startTick);
+
+    double secsPerTick = 0.0;
+    {
+        const double nextSec = playedTickToSecs(clip.startTick + engraving::Constants::DIVISION);
+        secsPerTick = (nextSec - startSec) / engraving::Constants::DIVISION;
+    }
+    if (secsPerTick <= 0.0) {
+        secsPerTick = 1.0 / engraving::Constants::DIVISION;
+    }
+
+    const double requestedStartSec = startSec + secsPerTick * (startTick - clip.startTick);
+
+    //! NOTE Whatever of the clip is pushed off the front of the score cannot be
+    //! heard, so it is trimmed away rather than left dangling.
+    const double trimmedHeadSec = std::max(0.0, -requestedStartSec);
+    const double newStartSec = std::max(0.0, requestedStartSec);
+
+    const double newInOffset = clip.inOffset + trimmedHeadSec;
+    const bool playedToEnd = clip.outOffset < 0.0;
+    double newOutOffset = playedToEnd ? envelope.totalSec : std::min(double(clip.outOffset), envelope.totalSec);
+
+    //! NOTE And the same goes for the tail running past the end of the score.
+    const double scoreEndSec = playback->totalPlayTime();
+    const double clipEndSec = newStartSec + (newOutOffset - newInOffset);
+    bool trimmedTail = false;
+    if (clipEndSec > scoreEndSec) {
+        newOutOffset -= clipEndSec - scoreEndSec;
+        trimmedTail = true;
+    }
+
+    if (newOutOffset <= newInOffset) {
+        //! NOTE Nothing of the clip would be heard at all; leave it alone.
+        return;
+    }
+
+    clip.startTick = int(playback->secToTick(newStartSec));
+    clip.inOffset = newInOffset;
+    clip.outOffset = (playedToEnd && !trimmedTail) ? -1.0 : newOutOffset;
+
+    audioSettings()->setAudioClip(clip);
+}
+
+mu::notation::AudioClipWave PlaybackController::clipWave(size_t bucketCount) const
+{
+    mu::notation::AudioClipWave wave;
+
+    mu::project::IProjectAudioSettingsPtr settings = audioSettings();
+    if (!settings || !audioClipResolver() || !notationPlayback() || bucketCount == 0) {
+        return wave;
+    }
+
+    const mu::project::AudioClipInfo& clip = settings->audioClip();
+    if (!clip.isValid()) {
+        return wave;
+    }
+
+    AudioClipEnvelope envelope;
+    if (!audioClipResolver()->clipEnvelope(clip.fileName.toStdString(), clip.inOffset, clip.outOffset,
+                                           bucketCount, envelope)) {
+        return wave;
+    }
+
+    const double startSec = playedTickToSecs(clip.startTick);
+    const double endSec = startSec + (envelope.toSec - envelope.fromSec);
+
+    wave.startTick = int(notationPlayback()->secToTick(startSec));
+    wave.endTick = int(notationPlayback()->secToTick(endSec));
+    wave.peaks = std::move(envelope.peaks);
+
+    return wave;
+}
+
+muse::async::Notification PlaybackController::clipWaveChanged() const
+{
+    return m_clipWaveChanged;
+}
+
 void PlaybackController::removeAudioClipTrack()
 {
     if (m_audioClipTrackId == 0 || !playback()) {
@@ -1760,6 +1862,7 @@ void PlaybackController::subscribeOnAudioParamsChanges()
     audioSettings()->audioClipChanged().onNotify(this, [this]() {
         removeAudioClipTrack();
         setupAudioClipTrack();
+        m_clipWaveChanged.notify();
     });
 }
 

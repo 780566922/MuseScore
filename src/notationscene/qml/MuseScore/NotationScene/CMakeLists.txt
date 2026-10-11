@@ -36,6 +36,8 @@ qt_add_qml_module(notationscene_qml
         abstractelementpopupmodel.h
         abstractnotationpaintview.cpp
         abstractnotationpaintview.h
+        audioclipoverlay.cpp
+        audioclipoverlay.h
         continuouspanel.cpp
         continuouspanel.h
         editgridsizedialogmodel.cpp

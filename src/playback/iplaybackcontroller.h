@@ -90,6 +90,9 @@ public:
     //! along with it and travels with it when the score is saved.
     virtual muse::Ret attachAudioClip(const muse::io::path_t& path) = 0;
     virtual void detachAudioClip() = 0;
+    //! Moves the clip so that it starts at `startTick`. Whatever of the clip
+    //! ends up outside the score cannot be heard, so it is trimmed away.
+    virtual void moveAudioClip(int startTick) = 0;
     virtual muse::audio::TrackId audioClipTrackId() const = 0;
     virtual bool hasAudioClip() const = 0;
 

@@ -23,6 +23,8 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 #include "audio/engine/internal/synthesizers/audiofile/audiofileresolver.h"
 
@@ -41,9 +43,22 @@ public:
     void setClipData(const muse::audio::AudioResourceId& id, const muse::ByteArray& data,
                      muse::secs_t startSec, muse::secs_t inSec, muse::secs_t outSec) override;
     void clearClipData(const muse::audio::AudioResourceId& id) override;
+    bool clipEnvelope(const muse::audio::AudioResourceId& id, muse::secs_t inSec, muse::secs_t outSec,
+                      size_t bucketCount, AudioClipEnvelope& envelope) const override;
     bool isDecodable(const muse::ByteArray& data) const override;
+
+    //! A coarse envelope of a decoded clip, kept so that the clip can be drawn
+    //! on the score without decoding it again for every repaint.
+    struct Envelope {
+        std::vector<float> peaks;    //! one peak per `bucketSecs` of the clip
+        double bucketSecs = 0.0;
+        double totalSec = 0.0;
+
+        bool isValid() const { return !peaks.empty() && bucketSecs > 0.0; }
+    };
 
 private:
     std::shared_ptr<muse::audio::synth::AudioFileResolver> m_resolver;
+    std::unordered_map<muse::audio::AudioResourceId, Envelope> m_envelopes;
 };
 }

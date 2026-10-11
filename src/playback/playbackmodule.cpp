@@ -29,6 +29,8 @@
 #include "interactive/iinteractiveuriregister.h"
 #include "ui/iuiactionsregister.h"
 
+#include "notation/iaudioclipwaveprovider.h"
+
 #include "internal/audioclipresolver.h"
 #include "internal/playbackcontroller.h"
 #include "internal/playbackcommandsregister.h"
@@ -95,6 +97,9 @@ void PlaybackContext::registerExports()
 
     ioc()->registerExport<IPlaybackCommandsController>(mname, m_commandsController);
     ioc()->registerExport<IPlaybackController>(mname, m_playbackController);
+    //! NOTE The score draws the audio clip but cannot reach playback, so the
+    //! controller answers for the clip through this notation interface.
+    ioc()->registerExport<notation::IAudioClipWaveProvider>(mname, m_playbackController);
     ioc()->registerExport<ISoundProfilesRepository>(mname, m_soundProfileRepo);
 }
 

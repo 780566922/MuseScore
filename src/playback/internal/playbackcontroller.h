@@ -35,6 +35,7 @@
 #include "notation/inotationautomation.h"
 #include "notation/inotationconfiguration.h"
 #include "notation/inotationplayback.h"
+#include "notation/iaudioclipwaveprovider.h"
 #include "project/iprojectaudiosettings.h"
 #include "audio/main/iplayer.h"
 #include "audio/main/iplayback.h"
@@ -51,7 +52,8 @@
 
 namespace mu::playback {
 class OnlineSoundsController;
-class PlaybackController : public IPlaybackController, public muse::async::Asyncable, public muse::Contextable
+class PlaybackController : public IPlaybackController, public notation::IAudioClipWaveProvider, public muse::async::Asyncable,
+    public muse::Contextable
 {
     muse::GlobalInject<IPlaybackConfiguration> configuration;
     muse::GlobalInject<IAudioClipResolver> audioClipResolver;
@@ -106,8 +108,12 @@ public:
 
     muse::Ret attachAudioClip(const muse::io::path_t& path) override;
     void detachAudioClip() override;
+    void moveAudioClip(int startTick) override;
     muse::audio::TrackId audioClipTrackId() const override;
     bool hasAudioClip() const override;
+
+    notation::AudioClipWave clipWave(size_t bucketCount) const override;
+    muse::async::Notification clipWaveChanged() const override;
 
     const InstrumentTrackIdMap& instrumentTrackIdMap() const override;
     const AuxTrackIdMap& auxTrackIdMap() const override;
@@ -277,6 +283,7 @@ private:
 
     //! Track of the audio clip attached to the score, if there is one
     muse::audio::TrackId m_audioClipTrackId = 0;
+    muse::async::Notification m_clipWaveChanged;
 
     InstrumentTrackIdMap m_instrumentTrackIdMap;
     AuxTrackIdMap m_auxTrackIdMap;

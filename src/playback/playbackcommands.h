@@ -51,6 +51,7 @@ inline static const muse::rcommand::Command RELOAD_PLAYBACK_CACHE_COMMAND("comma
 
 inline static const muse::rcommand::Command ATTACH_AUDIO_CLIP_COMMAND("command://playback/attach-audio-clip"); // with params
 inline static const muse::rcommand::Command DETACH_AUDIO_CLIP_COMMAND("command://playback/detach-audio-clip");
+inline static const muse::rcommand::Command MOVE_AUDIO_CLIP_COMMAND("command://playback/move-audio-clip"); // with params
 
 inline static const muse::rcommand::Command TOGGLE_MIXER_SECTION_COMMAND("command://playback/toggle-mixer-section"); // with params
 inline static const muse::rcommand::Command TOGGLE_AUX_SEND_COMMAND("command://playback/toggle-aux-send");

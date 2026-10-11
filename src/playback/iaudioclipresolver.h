@@ -22,12 +22,24 @@
 
 #pragma once
 
+#include <vector>
+
 #include "modularity/imoduleinterface.h"
 
 #include "audio/common/audiotypes.h"
 #include "global/types/bytearray.h"
 
 namespace mu::playback {
+//! The part of an audio clip that is heard, in the shape it is drawn in.
+struct AudioClipEnvelope {
+    double fromSec = 0.0;            //! where the part that is heard begins inside the clip
+    double toSec = 0.0;              //! where it ends
+    double totalSec = 0.0;           //! how long the whole clip is
+    std::vector<float> peaks;        //! envelope of the part that is heard, in [0, 1]
+
+    bool isValid() const { return toSec > fromSec && !peaks.empty(); }
+};
+
 //! Hands audio clips attached to a score over to the audio engine.
 //!
 //! Unlike a soundfont or a plugin, an audio clip is not a globally available
@@ -51,6 +63,13 @@ public:
                              muse::secs_t startSec, muse::secs_t inSec, muse::secs_t outSec) = 0;
 
     virtual void clearClipData(const muse::audio::AudioResourceId& id) = 0;
+
+    //! The envelope of a clip handed over earlier, for drawing it on the score.
+    //! `envelope.peaks` receives `bucketCount` values in [0, 1] spread over the
+    //! part of the clip between `inSec` and `outSec`; a negative `outSec` means
+    //! "to the end of the clip". Returns false if there is no such clip.
+    virtual bool clipEnvelope(const muse::audio::AudioResourceId& id, muse::secs_t inSec, muse::secs_t outSec,
+                              size_t bucketCount, AudioClipEnvelope& envelope) const = 0;
 
     //! Whether `data` is something the decoder can make sense of, so that a
     //! file the user picked can be turned down before it is stored.

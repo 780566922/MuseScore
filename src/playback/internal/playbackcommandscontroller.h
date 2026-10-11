@@ -62,6 +62,7 @@ private:
 
     muse::Ret attachAudioClip(const muse::rcommand::Params& params);
     muse::Ret detachAudioClip();
+    muse::Ret moveAudioClip(const muse::rcommand::Params& params);
 
     muse::Ret toggleMixerSection(const muse::rcommand::Params& params);
     muse::Ret toggleAuxSend(const muse::rcommand::Params& params);

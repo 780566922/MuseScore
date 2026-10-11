@@ -207,6 +207,13 @@ static const std::vector<CommandInfo> s_commandInfos = {
         InputSchema(),
         Decoration()
     },
+    CommandInfo{
+        MOVE_AUDIO_CLIP_COMMAND,
+        TranslatableString("playback", "Move the audio file"),
+        TranslatableString("playback", "Move the audio file played along with the score"),
+        InputSchema({ { "tick", Arg(DataType::Integer, u"Position on the score, in ticks") } }),
+        Decoration()
+    },
 
     CommandInfo{
         TOGGLE_MIXER_SECTION_COMMAND,

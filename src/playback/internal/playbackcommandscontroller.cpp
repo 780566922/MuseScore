@@ -74,6 +74,7 @@ void PlaybackCommandsController::init()
 
     registerCommand(ATTACH_AUDIO_CLIP_COMMAND, [this](const rcommand::Params& params) { return attachAudioClip(params); });
     registerCommand(DETACH_AUDIO_CLIP_COMMAND, [this]() { return detachAudioClip(); });
+    registerCommand(MOVE_AUDIO_CLIP_COMMAND, [this](const rcommand::Params& params) { return moveAudioClip(params); });
 
     registerCommand(TOGGLE_MIXER_SECTION_COMMAND, [this](const rcommand::Params& params) { return toggleMixerSection(params); });
     registerCommand(TOGGLE_AUX_SEND_COMMAND, [this](const rcommand::Params& params) { return toggleAuxSend(params); });
@@ -108,6 +109,7 @@ void PlaybackCommandsController::init()
             { "toggle-aux-channel", TOGGLE_AUX_CHANNEL_COMMAND, make_conv({ { "auxchannel-index", param<int> } }) },
             { "attach-audio-clip", ATTACH_AUDIO_CLIP_COMMAND, make_conv({ { "path", param<io::path_t> } }) },
             { "detach-audio-clip", DETACH_AUDIO_CLIP_COMMAND, {} },
+            { "move-audio-clip", MOVE_AUDIO_CLIP_COMMAND, make_conv({ { "tick", param<int> } }) },
         };
 
         registerActionToCommand(this, actionToCommand, dispatcher(), actionsDispatcher());
@@ -142,6 +144,17 @@ muse::Ret PlaybackCommandsController::attachAudioClip(const muse::rcommand::Para
 muse::Ret PlaybackCommandsController::detachAudioClip()
 {
     playbackController()->detachAudioClip();
+    return muse::make_ok();
+}
+
+muse::Ret PlaybackCommandsController::moveAudioClip(const muse::rcommand::Params& params)
+{
+    auto search = params.find("tick");
+    if (search == params.end()) {
+        return muse::make_ret(muse::Ret::Code::UnknownError);
+    }
+
+    playbackController()->moveAudioClip(search->second.toInt());
     return muse::make_ok();
 }
 

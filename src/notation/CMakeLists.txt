@@ -48,6 +48,7 @@ target_sources(notation PRIVATE
     inotationelements.h
     inotationparts.h
     iinstrumentsrepository.h
+    iaudioclipwaveprovider.h
 
     notationtypes.h
     types/instrumentstypes.h
