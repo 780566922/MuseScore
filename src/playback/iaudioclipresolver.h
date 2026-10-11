@@ -51,5 +51,9 @@ public:
                              muse::secs_t startSec, muse::secs_t inSec, muse::secs_t outSec) = 0;
 
     virtual void clearClipData(const muse::audio::AudioResourceId& id) = 0;
+
+    //! Whether `data` is something the decoder can make sense of, so that a
+    //! file the user picked can be turned down before it is stored.
+    virtual bool isDecodable(const muse::ByteArray& data) const = 0;
 };
 }

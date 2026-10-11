@@ -72,6 +72,9 @@ void PlaybackCommandsController::init()
     registerCommand(OPEN_PLAYBACK_SETUP_COMMAND, [this]() { return showPlaybackSetup(); });
     registerCommand(RELOAD_PLAYBACK_CACHE_COMMAND, &IPlaybackController::reloadPlaybackCache);
 
+    registerCommand(ATTACH_AUDIO_CLIP_COMMAND, [this](const rcommand::Params& params) { return attachAudioClip(params); });
+    registerCommand(DETACH_AUDIO_CLIP_COMMAND, [this]() { return detachAudioClip(); });
+
     registerCommand(TOGGLE_MIXER_SECTION_COMMAND, [this](const rcommand::Params& params) { return toggleMixerSection(params); });
     registerCommand(TOGGLE_AUX_SEND_COMMAND, [this](const rcommand::Params& params) { return toggleAuxSend(params); });
     registerCommand(TOGGLE_AUX_CHANNEL_COMMAND, [this](const rcommand::Params& params) { return toggleAuxChannel(params); });
@@ -103,10 +106,43 @@ void PlaybackCommandsController::init()
             { "toggle-mixer-section", TOGGLE_MIXER_SECTION_COMMAND, mixerSectionToggle },
             { "toggle-aux-send", TOGGLE_AUX_SEND_COMMAND, make_conv({ { "auxsend-index", param<int> } }) },
             { "toggle-aux-channel", TOGGLE_AUX_CHANNEL_COMMAND, make_conv({ { "auxchannel-index", param<int> } }) },
+            { "attach-audio-clip", ATTACH_AUDIO_CLIP_COMMAND, make_conv({ { "path", param<io::path_t> } }) },
+            { "detach-audio-clip", DETACH_AUDIO_CLIP_COMMAND, {} },
         };
 
         registerActionToCommand(this, actionToCommand, dispatcher(), actionsDispatcher());
     }
+}
+
+//! Formats the decoder is able to make sense of; used both to pick a file and
+//! to tell whether a file dropped onto the score is one we can play.
+static const std::vector<std::string> audioClipFileFilters = {
+    "*.wav", "*.wave", "*.ogg", "*.oga", "*.mp3"
+};
+
+muse::Ret PlaybackCommandsController::attachAudioClip(const muse::rcommand::Params& params)
+{
+    io::path_t path;
+
+    auto search = params.find("path");
+    if (search != params.end() && !search->second.toString().empty()) {
+        path = io::path_t(search->second.toString());
+    } else {
+        path = interactive()->selectOpeningFileSync(muse::trc("playback", "Attach an audio file"), "",
+                                                    audioClipFileFilters);
+    }
+
+    if (path.empty()) {
+        return muse::make_ret(muse::Ret::Code::Cancel);
+    }
+
+    return playbackController()->attachAudioClip(path);
+}
+
+muse::Ret PlaybackCommandsController::detachAudioClip()
+{
+    playbackController()->detachAudioClip();
+    return muse::make_ok();
 }
 
 muse::Ret PlaybackCommandsController::rewind(const muse::rcommand::Params& params)

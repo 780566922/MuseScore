@@ -29,6 +29,8 @@
 #include "async/asyncable.h"
 #include "actions/actiontypes.h"
 #include "context/iglobalcontext.h"
+#include "io/ifilesystem.h"
+#include "io/path.h"
 #include "engraving/types/types.h"
 #include "notation/inotationautomation.h"
 #include "notation/inotationconfiguration.h"
@@ -53,6 +55,7 @@ class PlaybackController : public IPlaybackController, public muse::async::Async
 {
     muse::GlobalInject<IPlaybackConfiguration> configuration;
     muse::GlobalInject<IAudioClipResolver> audioClipResolver;
+    muse::GlobalInject<muse::io::IFileSystem> fileSystem;
     muse::GlobalInject<notation::INotationConfiguration> notationConfiguration;
     muse::ContextInject<ISoundProfilesRepository> profilesRepo = { this };
     muse::ContextInject<muse::audio::IPlayback> playback = { this };
@@ -100,6 +103,10 @@ public:
     muse::Ret toggleHearPlaybackWhenEditing() override;
 
     muse::Ret reloadPlaybackCache() override;
+
+    muse::Ret attachAudioClip(const muse::io::path_t& path) override;
+    void detachAudioClip() override;
+    bool hasAudioClip() const override;
 
     const InstrumentTrackIdMap& instrumentTrackIdMap() const override;
     const AuxTrackIdMap& auxTrackIdMap() const override;
@@ -212,6 +219,7 @@ private:
     void setupPlaybackIfNeed();
     void setupPlayback();
     void setupAudioClipTrack();
+    void removeAudioClipTrack();
     void subscribeOnAudioParamsChanges();
     void setupTracks();
     void setupPlayer();

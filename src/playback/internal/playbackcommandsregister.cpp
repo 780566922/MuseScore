@@ -194,6 +194,21 @@ static const std::vector<CommandInfo> s_commandInfos = {
     },
 
     CommandInfo{
+        ATTACH_AUDIO_CLIP_COMMAND,
+        TranslatableString("playback", "Attach an audio file…"),
+        TranslatableString("playback", "Play an audio file along with the score"),
+        InputSchema({ { "path", Arg(DataType::String, u"Path to the audio file; asked for if not given") } }),
+        Decoration()
+    },
+    CommandInfo{
+        DETACH_AUDIO_CLIP_COMMAND,
+        TranslatableString("playback", "Remove the audio file"),
+        TranslatableString("playback", "Remove the audio file played along with the score"),
+        InputSchema(),
+        Decoration()
+    },
+
+    CommandInfo{
         TOGGLE_MIXER_SECTION_COMMAND,
         TranslatableString("playback", "Toggle mixer section"),
         TranslatableString("playback", "Toggle mixer section"),

@@ -60,6 +60,9 @@ private:
     muse::Ret rewind(const muse::rcommand::Params& params);
     muse::Ret showPlaybackSetup();
 
+    muse::Ret attachAudioClip(const muse::rcommand::Params& params);
+    muse::Ret detachAudioClip();
+
     muse::Ret toggleMixerSection(const muse::rcommand::Params& params);
     muse::Ret toggleAuxSend(const muse::rcommand::Params& params);
     muse::Ret toggleAuxChannel(const muse::rcommand::Params& params);

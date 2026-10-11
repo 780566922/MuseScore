@@ -41,6 +41,7 @@ public:
     void setClipData(const muse::audio::AudioResourceId& id, const muse::ByteArray& data,
                      muse::secs_t startSec, muse::secs_t inSec, muse::secs_t outSec) override;
     void clearClipData(const muse::audio::AudioResourceId& id) override;
+    bool isDecodable(const muse::ByteArray& data) const override;
 
 private:
     std::shared_ptr<muse::audio::synth::AudioFileResolver> m_resolver;

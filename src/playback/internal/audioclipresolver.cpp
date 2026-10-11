@@ -76,3 +76,9 @@ void AudioClipResolver::clearClipData(const AudioResourceId& id)
 {
     m_resolver->clearClipData(id);
 }
+
+bool AudioClipResolver::isDecodable(const ByteArray& data) const
+{
+    codec::AudioData decoded;
+    return codec::AudioDecoder::decodeMemory(data, decoded);
+}

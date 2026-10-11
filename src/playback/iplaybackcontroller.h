@@ -26,7 +26,9 @@
 #include "async/notification.h"
 #include "async/promise.h"
 #include "audio/common/audiotypes.h"
+#include "global/io/path.h"
 #include "global/progress.h"
+#include "global/types/ret.h"
 #include "modularity/imoduleinterface.h"
 
 #include "engraving/dom/noteval.h"
@@ -83,6 +85,12 @@ public:
     virtual muse::Ret toggleHearPlaybackWhenEditing() = 0;
 
     virtual muse::Ret reloadPlaybackCache() = 0;
+
+    //! Attaches the audio file at `path` to the score, so that it is played
+    //! along with it and travels with it when the score is saved.
+    virtual muse::Ret attachAudioClip(const muse::io::path_t& path) = 0;
+    virtual void detachAudioClip() = 0;
+    virtual bool hasAudioClip() const = 0;
 
     using InstrumentTrackIdMap = std::unordered_map<engraving::InstrumentTrackId, muse::audio::TrackId>;
     virtual const InstrumentTrackIdMap& instrumentTrackIdMap() const = 0;

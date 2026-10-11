@@ -176,6 +176,20 @@ const UiActionList PlaybackUiActions::s_settingsActions = {
              IconCode::Code::COUNT_IN,
              Checkable::Yes
              ),
+    UiAction("attach-audio-clip",
+             mu::context::UiCtxProjectOpened,
+             mu::context::CTX_NOTATION_OPENED,
+             TranslatableString("action", "Attach an audio file…"),
+             TranslatableString("action", "Play an audio file along with the score"),
+             IconCode::Code::AUDIO
+             ),
+    UiAction("detach-audio-clip",
+             mu::context::UiCtxProjectOpened,
+             mu::context::CTX_NOTATION_OPENED,
+             TranslatableString("action", "Remove the audio file"),
+             TranslatableString("action", "Remove the audio file played along with the score"),
+             IconCode::Code::NONE
+             ),
 };
 
 const UiActionList PlaybackUiActions::s_loopBoundaryActions = {

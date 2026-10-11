@@ -1567,6 +1567,74 @@ void PlaybackController::setupAudioClipTrack()
     });
 }
 
+muse::Ret PlaybackController::attachAudioClip(const muse::io::path_t& path)
+{
+    if (!audioSettings() || !audioClipResolver() || !fileSystem()) {
+        return muse::make_ret(muse::Ret::Code::UnknownError);
+    }
+
+    muse::RetVal<ByteArray> data = fileSystem()->readFile(path);
+    if (!data.ret) {
+        LOGE() << "unable to read the audio file: " << path;
+        return data.ret;
+    }
+
+    if (!audioClipResolver()->isDecodable(data.val)) {
+        LOGE() << "unable to decode the audio file: " << path;
+        return muse::make_ret(muse::Ret::Code::UnknownError);
+    }
+
+    //! NOTE Whatever the clip was aligned to is kept, so that swapping the
+    //! audio of a score that has already been lined up does not undo that.
+    project::AudioClipInfo clip = audioSettings()->audioClip();
+    const muse::String previousName = clip.fileName;
+    clip.fileName = muse::io::filename(path).toString();
+
+    //! NOTE Storing the clip is what brings the track into being, so the track
+    //! is not built here; see the subscription in setupPlayback().
+    audioSettings()->setAudioClip(clip);
+    audioSettings()->setAudioClipData(data.val);
+
+    if (!previousName.isEmpty() && previousName != clip.fileName) {
+        audioClipResolver()->clearClipData(previousName.toStdString());
+    }
+
+    return muse::make_ok();
+}
+
+void PlaybackController::detachAudioClip()
+{
+    if (!audioSettings()) {
+        return;
+    }
+
+    const project::AudioClipInfo clip = audioSettings()->audioClip();
+    if (!clip.isValid()) {
+        return;
+    }
+
+    //! NOTE Likewise, dropping the clip is what takes the track away.
+    audioSettings()->setAudioClip(project::AudioClipInfo());
+    audioSettings()->setAudioClipData(ByteArray());
+
+    audioClipResolver()->clearClipData(clip.fileName.toStdString());
+}
+
+bool PlaybackController::hasAudioClip() const
+{
+    return audioSettings() && audioSettings()->audioClip().isValid();
+}
+
+void PlaybackController::removeAudioClipTrack()
+{
+    if (m_audioClipTrackId == 0 || !playback()) {
+        return;
+    }
+
+    playback()->removeTrack(m_audioClipTrackId);
+    m_audioClipTrackId = 0;
+}
+
 void PlaybackController::subscribeOnAudioParamsChanges()
 {
     playback()->masterControlParamsChanged().onReceive(this, [this](const ControlParams& params) {
@@ -1677,6 +1745,14 @@ void PlaybackController::subscribeOnAudioParamsChanges()
             outParams.auxSends = params;
             audioSettings()->setAuxOutputParams(auxIdx, outParams);
         }
+    });
+
+    //! NOTE The clip can be replaced, moved or dropped at any time, and each of
+    //! those calls for a different track. Rebuilding it here means that anyone
+    //! storing a clip gets the track for free.
+    audioSettings()->audioClipChanged().onNotify(this, [this]() {
+        removeAudioClipTrack();
+        setupAudioClipTrack();
     });
 }
 
