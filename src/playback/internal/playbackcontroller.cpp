@@ -1569,6 +1569,11 @@ void PlaybackController::setupAudioClipTrack()
     .onReject(this, [](int code, const std::string& msg) {
         LOGE() << "can't add the audio clip track, code: [" << code << "] " << msg;
     });
+
+    //! NOTE The clip only becomes drawable now, and the score may well have
+    //! been built before this ran; there being no guarantee about which of the
+    //! two comes first, whoever draws it is told again here.
+    m_clipWaveChanged.notify();
 }
 
 muse::Ret PlaybackController::attachAudioClip(const muse::io::path_t& path)
