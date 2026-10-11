@@ -23,8 +23,10 @@
 #include "abstractnotationpaintview.h"
 
 #include <QCursor>
+#include <QFileInfo>
 #include <QPainter>
 #include <QMimeData>
+#include <QUrl>
 
 #include "async/async.h"
 #include "log.h"
@@ -50,6 +52,32 @@ using namespace muse::draw;
 using namespace muse::actions;
 
 static constexpr qreal SCROLL_LIMIT_OFF_OVERSCROLL_FACTOR = 0.75;
+
+//! NOTE Kept in step with the formats the decoder understands, which is also
+//! what the "Attach an audio file" dialog offers.
+static const QStringList AUDIO_CLIP_SUFFIXES = { "wav", "wave", "ogg", "oga", "mp3" };
+
+static bool isAudioClipFile(const QUrl& url)
+{
+    if (!url.isLocalFile()) {
+        return false;
+    }
+
+    const QFileInfo info(url.toLocalFile());
+    return info.isFile() && AUDIO_CLIP_SUFFIXES.contains(info.suffix().toLower());
+}
+
+//! The single audio file among `urls`, or an empty path if there is none
+static muse::io::path_t audioClipFileAmong(const QList<QUrl>& urls)
+{
+    for (const QUrl& url : urls) {
+        if (isAudioClipFile(url)) {
+            return muse::io::path_t(url.toLocalFile());
+        }
+    }
+
+    return muse::io::path_t();
+}
 
 AbstractNotationPaintView::AbstractNotationPaintView(QQuickItem* parent)
     : muse::uicomponents::QuickPaintedView(parent), muse::Contextable(muse::iocCtxForQmlObject(this))
@@ -1445,6 +1473,14 @@ QVariant AbstractNotationPaintView::inputMethodQuery(Qt::InputMethodQuery query)
 
 void AbstractNotationPaintView::dragEnterEvent(QDragEnterEvent* event)
 {
+    //! NOTE An audio file is not dropped onto the score at a position, it is
+    //! simply attached to it, so it never reaches the input controller.
+    if (event->mimeData() && !audioClipFileAmong(event->mimeData()->urls()).empty()) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
+        return;
+    }
+
     if (isInited()) {
         m_inputController->dragEnterEvent(event);
     }
@@ -1459,6 +1495,12 @@ void AbstractNotationPaintView::dragLeaveEvent(QDragLeaveEvent* event)
 
 void AbstractNotationPaintView::dragMoveEvent(QDragMoveEvent* event)
 {
+    if (event->mimeData() && !audioClipFileAmong(event->mimeData()->urls()).empty()) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
+        return;
+    }
+
     if (isInited()) {
         m_inputController->dragMoveEvent(event);
     }
@@ -1466,6 +1508,13 @@ void AbstractNotationPaintView::dragMoveEvent(QDragMoveEvent* event)
 
 void AbstractNotationPaintView::dropEvent(QDropEvent* event)
 {
+    const muse::io::path_t audioFile = event->mimeData() ? audioClipFileAmong(event->mimeData()->urls()) : muse::io::path_t();
+    if (!audioFile.empty()) {
+        actionsDispatcher()->dispatch("attach-audio-clip", ActionData::make_arg1<muse::io::path_t>(audioFile));
+        event->acceptProposedAction();
+        return;
+    }
+
     if (isInited()) {
         m_inputController->dropEvent(event);
     }

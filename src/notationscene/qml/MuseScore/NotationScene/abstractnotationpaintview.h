@@ -27,6 +27,8 @@
 
 #include "modularity/ioc.h"
 
+#include "actions/iactionsdispatcher.h"
+
 #include "notation/inotationconfiguration.h"
 #include "notation/inotationcontextconfiguration.h"
 
@@ -80,6 +82,7 @@ class AbstractNotationPaintView : public muse::uicomponents::QuickPaintedView, p
     muse::ContextInject<muse::ui::IUiContextResolver> uiContextResolver = { this };
     muse::ContextInject<muse::ui::IMainWindow> mainWindow = { this };
     muse::ContextInject<muse::ui::IUiActionsRegister> actionsRegister = { this };
+    muse::ContextInject<muse::actions::IActionsDispatcher> actionsDispatcher = { this };
 
 public:
     explicit AbstractNotationPaintView(QQuickItem* parent = nullptr);
