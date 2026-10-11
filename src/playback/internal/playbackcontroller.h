@@ -42,6 +42,7 @@
 
 #include "drumsetloader.h"
 
+#include "../iaudioclipresolver.h"
 #include "../iplaybackcontroller.h"
 #include "../iplaybackconfiguration.h"
 #include "../isoundprofilesrepository.h"
@@ -51,6 +52,7 @@ class OnlineSoundsController;
 class PlaybackController : public IPlaybackController, public muse::async::Asyncable, public muse::Contextable
 {
     muse::GlobalInject<IPlaybackConfiguration> configuration;
+    muse::GlobalInject<IAudioClipResolver> audioClipResolver;
     muse::GlobalInject<notation::INotationConfiguration> notationConfiguration;
     muse::ContextInject<ISoundProfilesRepository> profilesRepo = { this };
     muse::ContextInject<muse::audio::IPlayback> playback = { this };
@@ -209,6 +211,7 @@ private:
     void resetPlayback();
     void setupPlaybackIfNeed();
     void setupPlayback();
+    void setupAudioClipTrack();
     void subscribeOnAudioParamsChanges();
     void setupTracks();
     void setupPlayer();
@@ -262,6 +265,9 @@ private:
     muse::async::Channel<muse::audio::aux_channel_idx_t, std::string> m_auxChannelNameChanged;
 
     muse::async::Asyncable m_seqAsyncReceiver; //! HACK - see PlaybackController::setupTracks
+
+    //! Track of the audio clip attached to the score, if there is one
+    muse::audio::TrackId m_audioClipTrackId = 0;
 
     InstrumentTrackIdMap m_instrumentTrackIdMap;
     AuxTrackIdMap m_auxTrackIdMap;

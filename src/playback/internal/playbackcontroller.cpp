@@ -1516,10 +1516,55 @@ void PlaybackController::setupPlayback()
 
     subscribeOnAudioParamsChanges();
     setupTracks();
+    setupAudioClipTrack();
     setupPlayer();
 
     m_isPlaybackInited = true;
     m_playbackInited.send(m_isPlaybackInited);
+}
+
+void PlaybackController::setupAudioClipTrack()
+{
+    if (!audioClipResolver() || !audioSettings()) {
+        return;
+    }
+
+    const project::AudioClipInfo& clip = audioSettings()->audioClip();
+    const ByteArray data = audioSettings()->audioClipData();
+
+    if (!clip.isValid() || data.empty()) {
+        return;
+    }
+
+    const AudioResourceId resourceId = clip.fileName.toStdString();
+
+    //! NOTE The engine resolves the source while the track is being added, so
+    //! the clip has to be decoded and handed over beforehand; doing it later
+    //! would be ignored.
+    audioClipResolver()->setClipData(resourceId, data, playedTickToSecs(clip.startTick), clip.inOffset, clip.outOffset);
+
+    AudioResourceMeta meta;
+    meta.id = resourceId;
+    meta.vendor = "MuseScore";
+    meta.type = std::string(AUDIO_FILE_TYPE_NAME);
+
+    //! NOTE An audio clip is not driven by notation events. The setup data is
+    //! only filled in because the engine rejects a track without a valid one.
+    mpe::PlaybackData playbackData;
+    playbackData.setupData.id = u"audio_file";
+    playbackData.setupData.category = mpe::SoundCategory::Percussions;
+
+    TrackParams trackParams;
+    trackParams.source = AudioInputParams { meta, {} };
+
+    playback()->addTrack(muse::trc("playback", "Audio"), std::move(playbackData), trackParams)
+    .onResolve(this, [this](const TrackId trackId, const TrackParams&) {
+        m_audioClipTrackId = trackId;
+        m_trackAdded.send(trackId);
+    })
+    .onReject(this, [](int code, const std::string& msg) {
+        LOGE() << "can't add the audio clip track, code: [" << code << "] " << msg;
+    });
 }
 
 void PlaybackController::subscribeOnAudioParamsChanges()

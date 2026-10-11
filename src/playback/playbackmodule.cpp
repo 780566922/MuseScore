@@ -29,6 +29,7 @@
 #include "interactive/iinteractiveuriregister.h"
 #include "ui/iuiactionsregister.h"
 
+#include "internal/audioclipresolver.h"
 #include "internal/playbackcontroller.h"
 #include "internal/playbackcommandsregister.h"
 #include "internal/playbackcommandsstate.h"
@@ -53,8 +54,10 @@ std::string PlaybackModule::moduleName() const
 void PlaybackModule::registerExports()
 {
     m_configuration = std::make_shared<PlaybackConfiguration>();
+    m_audioClipResolver = std::make_shared<AudioClipResolver>();
 
     globalIoc()->registerExport<IPlaybackConfiguration>(mname, m_configuration);
+    globalIoc()->registerExport<IAudioClipResolver>(mname, m_audioClipResolver);
 }
 
 void PlaybackModule::resolveImports()

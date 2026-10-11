@@ -27,6 +27,7 @@
 #include "modularity/imodulesetup.h"
 
 namespace mu::playback {
+class AudioClipResolver;
 class PlaybackConfiguration;
 class PlaybackController;
 class SoundProfilesRepository;
@@ -44,6 +45,7 @@ public:
     muse::modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
 
 private:
+    std::shared_ptr<AudioClipResolver> m_audioClipResolver;
     std::shared_ptr<PlaybackConfiguration> m_configuration;
 };
 

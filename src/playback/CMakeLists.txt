@@ -29,6 +29,10 @@ target_sources(playback PRIVATE
     playbacktypes.h
     playbackcommands.h
 
+    iaudioclipresolver.h
+    internal/audioclipresolver.cpp
+    internal/audioclipresolver.h
+
     internal/iplaybackcommandscontroller.h
     internal/playbackuiactions.cpp
     internal/playbackuiactions.h
