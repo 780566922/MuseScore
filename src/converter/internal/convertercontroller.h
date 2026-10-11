@@ -26,7 +26,10 @@
 #include "../iconvertercontroller.h"
 
 #include "modularity/ioc.h"
+#include "io/ifilesystem.h"
+#include "io/path.h"
 #include "notation/notationtypes.h"
+#include "project/iprojectaudiosettings.h"
 #include "project/iprojectcreator.h"
 #include "project/inotationwritersregister.h"
 #include "context/iglobalcontext.h"
@@ -39,6 +42,7 @@ class ConverterController : public IConverterController, public muse::Contextabl
 {
     muse::GlobalInject<project::IProjectCreator> notationCreator;
     muse::GlobalInject<project::INotationWritersRegister> writers;
+    muse::GlobalInject<muse::io::IFileSystem> fileSystem;
     muse::ContextInject<context::IGlobalContext> globalContext = { this };
     muse::ContextInject<muse::extensions::IExtensionsProvider> extensionsProvider = { this };
 
@@ -49,7 +53,8 @@ public:
     muse::Ret fileConvert(const muse::io::path_t& in, const muse::io::path_t& out, const OpenParams& openParams = {},
                           const muse::String& soundProfile = {}, const muse::io::path_t& tracksDiffPath = {},
                           const muse::UriQuery& extensionUri = {}, const std::string& transposeOptionsJson = {},
-                          const std::optional<ConvertTarget>& target = std::nullopt) override;
+                          const std::optional<ConvertTarget>& target = std::nullopt,
+                          const muse::io::path_t& audioClipPath = {}) override;
 
     muse::Ret batchConvert(const muse::io::path_t& batchJobFile, const OpenParams& openParams = {}, const muse::String& soundProfile = {},
                            const muse::UriQuery& extensionUri = {}, muse::ProgressPtr progress = nullptr) override;
@@ -98,7 +103,7 @@ private:
                           const muse::String& soundProfile = {}, const muse::io::path_t& tracksDiffPath = {},
                           const muse::UriQuery& extensionUri = {}, const TransposeOpts& transposeOptions = std::nullopt,
                           const std::optional<ConvertTarget>& target = std::nullopt, const std::vector<size_t>& visibleParts = {},
-                          const CopyrightInfo& copyright = {});
+                          const CopyrightInfo& copyright = {}, const muse::io::path_t& audioClipPath = {});
 
     muse::Ret convertScoreParts(project::INotationWriterPtr writer, notation::IMasterNotationPtr masterNotation,
                                 const muse::io::path_t& out);

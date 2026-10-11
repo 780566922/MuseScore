@@ -119,7 +119,8 @@ Ret ConverterController::fileConvert(const path_t& in, const path_t& out,
                                      const path_t& tracksDiffPath,
                                      const UriQuery& extensionUri,
                                      const std::string& transposeOptionsJson,
-                                     const std::optional<ConvertTarget>& target)
+                                     const std::optional<ConvertTarget>& target,
+                                     const muse::io::path_t& audioClipPath)
 {
     std::optional<TransposeOptions> transposeOptions;
 
@@ -132,7 +133,8 @@ Ret ConverterController::fileConvert(const path_t& in, const path_t& out,
         transposeOptions = transposeOptionsRet.val;
     }
 
-    return convertFile(in, out, openParams, soundProfile, tracksDiffPath, extensionUri, transposeOptions, target);
+    return convertFile(in, out, openParams, soundProfile, tracksDiffPath, extensionUri, transposeOptions, target,
+                       {}, {}, audioClipPath);
 }
 
 Ret ConverterController::convertFile(const muse::io::path_t& in, const muse::io::path_t& out,
@@ -143,7 +145,8 @@ Ret ConverterController::convertFile(const muse::io::path_t& in, const muse::io:
                                      const std::optional<notation::TransposeOptions>& transposeOptions,
                                      const std::optional<ConvertTarget>& target,
                                      const std::vector<size_t>& visibleParts,
-                                     const CopyrightInfo& copyright)
+                                     const CopyrightInfo& copyright,
+                                     const muse::io::path_t& audioClipPath)
 {
     TRACEFUNC;
 
@@ -175,6 +178,20 @@ Ret ConverterController::convertFile(const muse::io::path_t& in, const muse::io:
     if (!soundProfile.isEmpty()) {
         notationProject->audioSettings()->clearTrackInputParams();
         notationProject->audioSettings()->setActiveSoundProfile(soundProfile);
+    }
+
+    if (!audioClipPath.empty()) {
+        RetVal<ByteArray> audioData = fileSystem()->readFile(audioClipPath);
+        if (!audioData.ret) {
+            LOGE() << "failed to read the audio file, err: " << audioData.ret.toString() << ", path: " << audioClipPath;
+            return make_ret(Err::InFileFailedLoad);
+        }
+
+        project::AudioClipInfo clip;
+        clip.fileName = io::filename(audioClipPath).toString();
+
+        notationProject->audioSettings()->setAudioClip(clip);
+        notationProject->audioSettings()->setAudioClipData(audioData.val);
     }
 
     if (transposeOptions.has_value()) {

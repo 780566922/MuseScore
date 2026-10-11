@@ -218,8 +218,9 @@ int MuseScoreConsoleApp::processConverter(const MuseScoreCmdOptions::ConverterTa
         std::string transposeOptionsJson = task.params[MuseScoreCmdOptions::ParamKey::ScoreTransposeOptions].toString().toStdString();
         std::optional<ConvertTarget> target = parseTarget(task.params);
         io::path_t tracksDiffPath = task.params[MuseScoreCmdOptions::ParamKey::TracksDiffPath].toString();
+        io::path_t audioClipPath = task.params[MuseScoreCmdOptions::ParamKey::AudioClipPath].toString();
         ret = converter()->fileConvert(task.inputFile, task.outputFile, openParams, soundProfile, tracksDiffPath,
-                                       extensionUri, transposeOptionsJson, target);
+                                       extensionUri, transposeOptionsJson, target, audioClipPath);
     } break;
     case ConvertType::ConvertScoreParts:
         ret = converter()->convertScoreParts(task.inputFile, task.outputFile, openParams);

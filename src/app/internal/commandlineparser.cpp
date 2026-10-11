@@ -98,6 +98,8 @@ void CommandLineParser::init()
     m_parser.addOption(QCommandLineOption({ "f", "force" },
                                           "Use with '-o <file>', ignore warnings reg. score being corrupted or from wrong version"));
 
+    m_parser.addOption(QCommandLineOption("attach-audio",
+                                          "Play the given audio file along with the score; use with '-o <file>'", "file"));
     m_parser.addOption(QCommandLineOption("score-media",
                                           "Export all media (excepting mp3) for a given score in a single JSON file and print it to stdout"));
     m_parser.addOption(QCommandLineOption("highlight-config", "Set highlight to svg, generated from a given score", "highlight-config"));
@@ -319,6 +321,11 @@ void CommandLineParser::parse(int argc, char** argv)
         // Only if "-o" is set "transpose" has some meaning
         if (m_parser.isSet("transpose")) {
             m_options->converterTask.params[MuseScoreCmdOptions::ParamKey::ScoreTransposeOptions] = m_parser.value("transpose");
+        }
+
+        if (m_parser.isSet("attach-audio")) {
+            m_options->converterTask.params[MuseScoreCmdOptions::ParamKey::AudioClipPath]
+                = fromUserInputPath(m_parser.value("attach-audio"));
         }
 
         if (m_parser.isSet("page")) {

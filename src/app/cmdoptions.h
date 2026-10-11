@@ -46,6 +46,7 @@ struct MuseScoreCmdOptions : public muse::CmdOptions {
         PageNumber,
         ScoreRegion,
         NoAudio,
+        AudioClipPath,
     };
 
     struct {
