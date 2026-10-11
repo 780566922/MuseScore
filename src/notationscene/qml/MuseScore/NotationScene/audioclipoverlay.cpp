@@ -30,6 +30,7 @@
 #include <QColor>
 
 #include "draw/painter.h"
+#include "draw/types/brush.h"
 #include "draw/types/pen.h"
 
 #include "engraving/dom/measure.h"
@@ -102,6 +103,8 @@ bool AudioClipOverlay::isDragging() const
 void AudioClipOverlay::rebuildSpans()
 {
     m_spans.clear();
+    m_offScoreStart = false;
+    m_offScoreEnd = false;
 
     if (!m_notation || !m_wave.isValid()) {
         return;
@@ -114,7 +117,8 @@ void AudioClipOverlay::rebuildSpans()
     }
 
     //! NOTE Only what falls inside the score can be seen or heard, so it is
-    //! that part of the clip that is spread over the staves.
+    //! that part of the clip that is spread over the staves. The clip itself
+    //! keeps its whole length; see the note in moveAudioClip.
     const int scoreEndTick = lastMeasure->endTick().ticks();
     const int startTick = m_wave.startTick + m_dragDeltaTicks;
     const int endTick = m_wave.endTick + m_dragDeltaTicks;
@@ -125,6 +129,9 @@ void AudioClipOverlay::rebuildSpans()
 
     const int drawnStart = std::max(startTick, 0);
     const int drawnEnd = std::min(endTick, scoreEndTick);
+
+    m_offScoreStart = drawnStart > startTick;
+    m_offScoreEnd = drawnEnd < endTick;
 
     if (drawnEnd <= drawnStart) {
         return;
@@ -253,6 +260,39 @@ void AudioClipOverlay::paint(muse::draw::Painter* painter)
         painter->setPen(Pen(line, waveWidth, PenStyle::SolidLine, PenCapStyle::FlatCap, PenJoinStyle::MiterJoin));
         painter->drawLines(waves);
     }
+
+    if (!m_offScoreStart && !m_offScoreEnd) {
+        return;
+    }
+
+    //! NOTE The part of the clip that has been slid out of the score is drawn
+    //! nowhere, there being no room for it, so without a marker the edge it went
+    //! out through would look like the clip simply stopping there.
+    const double markerSize = 0.9 * m_spatium;
+
+    auto paintMarker = [&](const RectF& lane, bool atStart) {
+        const double x = atStart ? lane.left() : lane.right();
+        const double y = lane.center().y();
+        const double tip = atStart ? x - markerSize : x + markerSize;
+
+        const PointF triangle[] = {
+            PointF(x, y - markerSize),
+            PointF(tip, y),
+            PointF(x, y + markerSize),
+        };
+
+        painter->setPen(Pen(line, edgeWidth, PenStyle::SolidLine, PenCapStyle::FlatCap, PenJoinStyle::MiterJoin));
+        painter->setBrush(Brush(line));
+        painter->drawPolygon(triangle, 3);
+    };
+
+    if (m_offScoreStart) {
+        paintMarker(m_spans.front().lane, true);
+    }
+
+    if (m_offScoreEnd) {
+        paintMarker(m_spans.back().lane, false);
+    }
 }
 
 bool AudioClipOverlay::hitTest(const PointF& logicalPos) const
@@ -307,9 +347,9 @@ void AudioClipOverlay::dragTo(const PointF& logicalPos)
         return;
     }
 
-    //! NOTE The clip lines up with the grid, so the drag is taken in beats.
-    const double ticks = (logicalPos.x() - m_dragStartPos.x()) * m_ticksPerUnit;
-    const int delta = int(std::round(ticks / Constants::DIVISION) * Constants::DIVISION);
+    //! NOTE The clip is lined up by ear rather than by the grid, so the drag is
+    //! followed as closely as the score can express it; nothing is snapped.
+    const int delta = int(std::lround((logicalPos.x() - m_dragStartPos.x()) * m_ticksPerUnit));
 
     if (delta == m_dragDeltaTicks) {
         return;

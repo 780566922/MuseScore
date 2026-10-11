@@ -40,8 +40,12 @@ class Measure;
 namespace mu::notation {
 //! The audio clip attached to the score, drawn as a strip above the staves.
 //!
-//! Holding a modifier key and dragging it moves the clip along the score;
-//! whatever ends up outside the score is trimmed away.
+//! Holding a modifier key and dragging it slides the clip along the score. The
+//! clip is only ever moved, never shortened: the part of it that ends up before
+//! the beginning of the score, or past its end, is simply not reached when the
+//! score is played back or exported, and comes back when the clip is moved back
+//! over the score. A marker on the strip points out when an end of the clip has
+//! been pushed out of the score in this way.
 class AudioClipOverlay : public muse::Contextable, public muse::async::Asyncable
 {
     muse::ContextInject<IAudioClipWaveProvider> waveProvider = { this };
@@ -94,6 +98,11 @@ private:
     AudioClipWave m_wave;
     std::vector<Span> m_spans;
     double m_spatium = 1.0;
+
+    //! Whether an end of the clip has been slid out of the score, and so is
+    //! neither drawn nor heard.
+    bool m_offScoreStart = false;
+    bool m_offScoreEnd = false;
 
     bool m_dragging = false;
     muse::PointF m_dragStartPos;

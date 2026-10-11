@@ -90,8 +90,11 @@ public:
     //! along with it and travels with it when the score is saved.
     virtual muse::Ret attachAudioClip(const muse::io::path_t& path) = 0;
     virtual void detachAudioClip() = 0;
-    //! Moves the clip so that it starts at `startTick`. Whatever of the clip
-    //! ends up outside the score cannot be heard, so it is trimmed away.
+    //! Slides the clip along the score so that it starts at `startTick`. The
+    //! clip keeps its whole length: `startTick` may be negative, or far enough
+    //! along for the clip to run past the end of the score, and either way the
+    //! part that is left outside the score is simply never reached when the
+    //! score is played back or exported.
     virtual void moveAudioClip(int startTick) = 0;
     virtual muse::audio::TrackId audioClipTrackId() const = 0;
     virtual bool hasAudioClip() const = 0;

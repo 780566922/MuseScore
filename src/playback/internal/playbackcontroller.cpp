@@ -1631,64 +1631,21 @@ bool PlaybackController::hasAudioClip() const
 
 void PlaybackController::moveAudioClip(int startTick)
 {
-    if (!audioSettings() || !audioClipResolver() || !notationPlayback()) {
+    if (!audioSettings()) {
         return;
     }
 
     mu::project::AudioClipInfo clip = audioSettings()->audioClip();
-    if (!clip.isValid()) {
+    if (!clip.isValid() || clip.startTick == startTick) {
         return;
     }
 
-    const mu::notation::INotationPlaybackPtr playback = notationPlayback();
-    const AudioResourceId resourceId = clip.fileName.toStdString();
-
-    AudioClipEnvelope envelope;
-    if (!audioClipResolver()->clipEnvelope(resourceId, clip.inOffset, clip.outOffset, 1, envelope)) {
-        return;
-    }
-
-    //! NOTE The clip has to be moved in seconds, because a position before the
-    //! beginning of the score is not something ticks can express.
-    const double startSec = playedTickToSecs(clip.startTick);
-
-    double secsPerTick = 0.0;
-    {
-        const double nextSec = playedTickToSecs(clip.startTick + engraving::Constants::DIVISION);
-        secsPerTick = (nextSec - startSec) / engraving::Constants::DIVISION;
-    }
-    if (secsPerTick <= 0.0) {
-        secsPerTick = 1.0 / engraving::Constants::DIVISION;
-    }
-
-    const double requestedStartSec = startSec + secsPerTick * (startTick - clip.startTick);
-
-    //! NOTE Whatever of the clip is pushed off the front of the score cannot be
-    //! heard, so it is trimmed away rather than left dangling.
-    const double trimmedHeadSec = std::max(0.0, -requestedStartSec);
-    const double newStartSec = std::max(0.0, requestedStartSec);
-
-    const double newInOffset = clip.inOffset + trimmedHeadSec;
-    const bool playedToEnd = clip.outOffset < 0.0;
-    double newOutOffset = playedToEnd ? envelope.totalSec : std::min(double(clip.outOffset), envelope.totalSec);
-
-    //! NOTE And the same goes for the tail running past the end of the score.
-    const double scoreEndSec = playback->totalPlayTime();
-    const double clipEndSec = newStartSec + (newOutOffset - newInOffset);
-    bool trimmedTail = false;
-    if (clipEndSec > scoreEndSec) {
-        newOutOffset -= clipEndSec - scoreEndSec;
-        trimmedTail = true;
-    }
-
-    if (newOutOffset <= newInOffset) {
-        //! NOTE Nothing of the clip would be heard at all; leave it alone.
-        return;
-    }
-
-    clip.startTick = int(playback->secToTick(newStartSec));
-    clip.inOffset = newInOffset;
-    clip.outOffset = (playedToEnd && !trimmedTail) ? -1.0 : newOutOffset;
+    //! NOTE Moving the clip only changes where it starts; the clip itself is
+    //! left whole. Whatever ends up before the beginning of the score or past
+    //! its end is simply not reached when the score is played back or exported,
+    //! so nothing has to be trimmed away - and moving the clip back brings all
+    //! of it back.
+    clip.startTick = startTick;
 
     audioSettings()->setAudioClip(clip);
 }
@@ -1716,8 +1673,13 @@ mu::notation::AudioClipWave PlaybackController::clipWave(size_t bucketCount) con
     const double startSec = playedTickToSecs(clip.startTick);
     const double endSec = startSec + (envelope.toSec - envelope.fromSec);
 
-    wave.startTick = int(notationPlayback()->secToTick(startSec));
-    wave.endTick = int(notationPlayback()->secToTick(endSec));
+    //! NOTE Where the clip starts is taken from the clip itself rather than
+    //! from the seconds it works out to, so that rounding cannot creep in as
+    //! the clip is dragged around. Only its length has to be converted.
+    const mu::notation::INotationPlaybackPtr playback = notationPlayback();
+
+    wave.startTick = clip.startTick;
+    wave.endTick = clip.startTick + int(playback->secToTick(endSec) - playback->secToTick(startSec));
     wave.peaks = std::move(envelope.peaks);
 
     return wave;
