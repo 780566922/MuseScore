@@ -48,6 +48,8 @@ MixerPanelSection {
                 return ui.theme.accentColor
             case MixerChannelItem.Aux:
                 return "#63D47B"
+            case MixerChannelItem.AudioFile:
+                return "#7EC8E3"
             case MixerChannelItem.Master:
                 return "#F87BDC"
             }

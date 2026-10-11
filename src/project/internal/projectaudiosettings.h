@@ -74,6 +74,8 @@ public:
     void setAudioClip(const AudioClipInfo& clip) override;
     muse::ByteArray audioClipData() const override;
     void setAudioClipData(const muse::ByteArray& data) override;
+    const AudioOutputParams& audioClipOutputParams() const override;
+    void setAudioClipOutputParams(const AudioOutputParams& params, bool notifySettingsChanged = true) override;
     muse::async::Notification audioClipChanged() const override;
 
     muse::async::Notification settingsChanged() const override;
@@ -138,6 +140,7 @@ private:
 
     AudioClipInfo m_audioClip;
     muse::ByteArray m_audioClipData;
+    AudioOutputParams m_audioClipOutputParams;
     muse::async::Notification m_audioClipChanged;
 };
 

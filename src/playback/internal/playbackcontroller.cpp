@@ -1556,6 +1556,7 @@ void PlaybackController::setupAudioClipTrack()
 
     TrackParams trackParams;
     trackParams.source = AudioInputParams { meta, {} };
+    trackParams.control = audioSettings()->audioClipOutputParams().control();
 
     playback()->addTrack(muse::trc("playback", "Audio"), std::move(playbackData), trackParams)
     .onResolve(this, [this](const TrackId trackId, const TrackParams&) {
@@ -1632,7 +1633,13 @@ void PlaybackController::removeAudioClipTrack()
     }
 
     playback()->removeTrack(m_audioClipTrackId);
+    m_trackRemoved.send(m_audioClipTrackId);
     m_audioClipTrackId = 0;
+}
+
+muse::audio::TrackId PlaybackController::audioClipTrackId() const
+{
+    return m_audioClipTrackId;
 }
 
 void PlaybackController::subscribeOnAudioParamsChanges()

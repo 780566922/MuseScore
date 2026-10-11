@@ -143,6 +143,8 @@ public:
     virtual void setAudioClip(const AudioClipInfo& clip) = 0;
     virtual muse::ByteArray audioClipData() const = 0;
     virtual void setAudioClipData(const muse::ByteArray& data) = 0;
+    virtual const AudioOutputParams& audioClipOutputParams() const = 0;
+    virtual void setAudioClipOutputParams(const AudioOutputParams& params, bool notifySettingsChanged = true) = 0;
     virtual muse::async::Notification audioClipChanged() const = 0;
 
     virtual muse::async::Notification settingsChanged() const = 0;

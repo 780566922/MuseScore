@@ -106,6 +106,7 @@ public:
 
     muse::Ret attachAudioClip(const muse::io::path_t& path) override;
     void detachAudioClip() override;
+    muse::audio::TrackId audioClipTrackId() const override;
     bool hasAudioClip() const override;
 
     const InstrumentTrackIdMap& instrumentTrackIdMap() const override;

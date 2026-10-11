@@ -291,6 +291,24 @@ void ProjectAudioSettings::setAudioClipData(const muse::ByteArray& data)
     m_settingsChanged.notify();
 }
 
+const mu::project::AudioOutputParams& ProjectAudioSettings::audioClipOutputParams() const
+{
+    return m_audioClipOutputParams;
+}
+
+void ProjectAudioSettings::setAudioClipOutputParams(const AudioOutputParams& params, bool notifySettingsChanged)
+{
+    if (m_audioClipOutputParams == params) {
+        return;
+    }
+
+    m_audioClipOutputParams = params;
+
+    if (notifySettingsChanged) {
+        m_settingsChanged.notify();
+    }
+}
+
 muse::async::Notification ProjectAudioSettings::audioClipChanged() const
 {
     return m_audioClipChanged;
@@ -345,6 +363,7 @@ Ret ProjectAudioSettings::read(const engraving::MscReader& reader)
 
     QJsonObject audioClipObj = rootObj.value("audioClip").toObject();
     m_audioClip = audioClipFromJson(audioClipObj);
+    m_audioClipOutputParams = outputParamsFromJson(rootObj.value("audioClipOut").toObject());
 
     if (m_audioClip.isValid()) {
         m_audioClipData = reader.readAudioFile(m_audioClip.fileName);
@@ -388,6 +407,7 @@ Ret ProjectAudioSettings::write(engraving::MscWriter& writer, notation::INotatio
     if (m_audioClip.isValid()) {
         rootObj["audioClip"] = audioClipToJson(m_audioClip);
         writer.addAudioFile(m_audioClip.fileName, m_audioClipData);
+        rootObj["audioClipOut"] = outputParamsToJson(m_audioClipOutputParams);
     }
 
     QByteArray json = QJsonDocument(rootObj).toJson();

@@ -88,6 +88,7 @@ public:
         SecondaryInstrument,
         Metronome,
         Aux,
+        AudioFile,
         Master,
     };
     Q_ENUM(Type)

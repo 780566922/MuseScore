@@ -90,6 +90,7 @@ public:
     //! along with it and travels with it when the score is saved.
     virtual muse::Ret attachAudioClip(const muse::io::path_t& path) = 0;
     virtual void detachAudioClip() = 0;
+    virtual muse::audio::TrackId audioClipTrackId() const = 0;
     virtual bool hasAudioClip() const = 0;
 
     using InstrumentTrackIdMap = std::unordered_map<engraving::InstrumentTrackId, muse::audio::TrackId>;

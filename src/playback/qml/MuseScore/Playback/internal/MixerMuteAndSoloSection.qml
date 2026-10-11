@@ -82,7 +82,9 @@ MixerPanelSection {
                 icon: IconCode.SOLO
                 checked: content.channelItem.solo
 
-                enabled: content.channelItem.type !== MixerChannelItem.Aux && (!content.channelItem.muted || content.channelItem.forceMute)
+                enabled: content.channelItem.type !== MixerChannelItem.Aux
+                         && content.channelItem.type !== MixerChannelItem.AudioFile
+                         && (!content.channelItem.muted || content.channelItem.forceMute)
                 visible: content.channelItem.type !== MixerChannelItem.Master && content.channelItem.type !== MixerChannelItem.Metronome
 
                 navigation.name: "SoloButton"

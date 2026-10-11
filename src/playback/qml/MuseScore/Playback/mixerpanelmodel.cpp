@@ -164,6 +164,10 @@ void MixerPanelModel::reloadItems()
 
     addInstrumentTrack(notationPlayback()->metronomeTrackId());
 
+    if (controller()->audioClipTrackId() != 0) {
+        m_mixerChannelList.push_back(buildAudioFileChannelItem(controller()->audioClipTrackId()));
+    }
+
     const auto& auxTrackIdMap = controller()->auxTrackIdMap();
     for (auto it = auxTrackIdMap.cbegin(); it != auxTrackIdMap.cend(); ++it) {
         if (configuration()->isAuxChannelVisible(it->first)) {
@@ -195,6 +199,11 @@ void MixerPanelModel::onTrackAdded(const TrackId& trackId)
         int index = resolveInsertIndex(instrumentTrackId);
 
         addItem(item, index);
+        return;
+    }
+
+    if (trackId == controller()->audioClipTrackId()) {
+        addItem(buildAudioFileChannelItem(trackId), masterChannelIndex());
         return;
     }
 
@@ -588,6 +597,53 @@ MixerChannelItem* MixerPanelModel::buildAuxChannelItem(aux_channel_idx_t index, 
     connect(item, &MixerChannelItem::soloMuteStateChanged, this,
             [this, index](const notation::INotationSoloMuteState::SoloMuteState& state) {
         audioSettings()->setAuxSoloMuteState(index, state);
+    });
+
+    return item;
+}
+
+MixerChannelItem* MixerPanelModel::buildAudioFileChannelItem(const TrackId trackId)
+{
+    MixerChannelItem* item = new MixerChannelItem(this, MixerChannelItem::Type::AudioFile, true /*outputOnly*/, trackId);
+    item->setPanelSection(m_navigationSection);
+
+    playback()->trackName(trackId)
+    .onResolve(this, [this, trackId](const RetVal<TrackName>& trackName) {
+        if (trackName.ret) {
+            if (MixerChannelItem* item = findChannelItem(trackId)) {
+                item->setTitle(QString::fromStdString(trackName.val));
+            }
+        } else {
+            LOGE() << "unable to get track name, error: " << trackName.ret.toString();
+        }
+    });
+
+    loadOutputParams(item, audioSettings()->audioClipOutputParams());
+
+    playback()->signalChanges(trackId)
+    .onResolve(this, [this, trackId](AudioSignalChanges signalChanges) {
+        if (MixerChannelItem* item = findChannelItem(trackId)) {
+            item->subscribeOnAudioSignalChanges(signalChanges);
+        }
+    })
+    .onReject(this, [](int errCode, std::string text) {
+        LOGE() << "unable to subscribe on audio signal changes from mixer channel, error code: " << errCode
+               << ", " << text;
+    });
+
+    connect(item, &MixerChannelItem::controlParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setControlParams(trackId, params.control());
+        audioSettings()->setAudioClipOutputParams(params);
+    });
+
+    connect(item, &MixerChannelItem::fxChainParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setFxChainParams(trackId, params.fxChain);
+        audioSettings()->setAudioClipOutputParams(params);
+    });
+
+    connect(item, &MixerChannelItem::auxSendsParamsChanged, this, [this, trackId](const AudioOutputParams& params) {
+        playback()->setAuxSendsParams(trackId, params.auxSends);
+        audioSettings()->setAudioClipOutputParams(params);
     });
 
     return item;
