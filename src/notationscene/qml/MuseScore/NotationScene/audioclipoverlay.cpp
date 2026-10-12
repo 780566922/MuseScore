@@ -50,8 +50,9 @@ using namespace mu::engraving;
 
 namespace mu::notation {
 //! How much of the clip one drawn value of the wave stands for. The strip is drawn
-//! about a point per pixel wide, so this covers a score of an hour; asking for
-//! values past the pixels there are costs nothing but the memory they take.
+//! about a point per pixel wide, so this covers a score of an hour; the envelope
+//! hands back fewer values than asked for when it holds fewer, so a short clip
+//! costs nothing extra for it.
 static constexpr size_t CLIP_WAVE_BUCKETS = 200000;
 static constexpr double LANE_HEIGHT_SPATIUMS = 5.0;
 

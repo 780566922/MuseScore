@@ -152,11 +152,15 @@ bool AudioClipResolver::clipEnvelope(const AudioResourceId& id, secs_t inSec, se
     result.fromSec = fromSec;
     result.toSec = toSec;
     result.totalSec = envelope.totalSec;
-    result.peaks.resize(bucketCount, 0.f);
 
-    const double bucketSecs = (toSec - fromSec) / bucketCount;
+    //! NOTE Asking for more values than the envelope holds would only repeat the
+    //! ones it has, so the ask is kept down to what there is to tell.
+    const size_t buckets = std::min(bucketCount, envelope.peaks.size());
+    result.peaks.resize(buckets, 0.f);
 
-    for (size_t bucket = 0; bucket < bucketCount; ++bucket) {
+    const double bucketSecs = (toSec - fromSec) / buckets;
+
+    for (size_t bucket = 0; bucket < buckets; ++bucket) {
         const size_t firstIndex = std::min(size_t((fromSec + bucket * bucketSecs) / envelope.bucketSecs),
                                            envelope.peaks.size() - 1);
         const size_t lastIndex = std::clamp(size_t(std::ceil((fromSec + (bucket + 1) * bucketSecs) / envelope.bucketSecs)),
