@@ -24,6 +24,8 @@
 
 #include <vector>
 
+#include <QColor>
+
 #include "modularity/ioc.h"
 #include "async/asyncable.h"
 #include "draw/types/geometry.h"
@@ -88,11 +90,14 @@ public:
 private:
     struct Span {
         muse::RectF lane;        //! where this piece of the clip is drawn, in logical coordinates
+        std::vector<double> beatXs; //! where the beats of the measure fall, in logical x
         double peakFrom = 0.0;   //! which part of the envelope it covers, in [0, 1]
         double peakTo = 1.0;
     };
 
     void rebuildSpans();
+
+    void paintBeatLines(muse::draw::Painter* painter, const Span& span, const QColor& color, double width) const;
 
     double xForTick(int tick) const;
     muse::RectF bandForTick(int tick) const;

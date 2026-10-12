@@ -43,6 +43,9 @@ class NotationContextMenuModel : public muse::uicomponents::AbstractMenuModel
 public:
     Q_INVOKABLE void loadItems(int elementType);
 
+    //! The menu of the audio clip, which is not part of the score.
+    Q_INVOKABLE void loadAudioClipItems();
+
 private:
     muse::uicomponents::MenuItemList makeItemsByElementType(engraving::ElementType type);
 

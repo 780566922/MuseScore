@@ -40,11 +40,13 @@ void NotationToolBarModel::load()
 
     AbstractToolBarModel::load();
 
+    //! NOTE The clip button stands in for the automation one: showing the clip
+    //! draws the score faint, which is the one visible thing the automation
+    //! button did, so keeping both would only say it twice.
     std::vector<rcommand::Command> commands = {
         OPEN_PARTS_COMMAND,
         appshell::DOCK_TOGGLE_MIXER_COMMAND,
-        TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND,
-        TOGGLE_AUTOMATION_COMMAND
+        TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND
     };
 
     ToolBarItemList items;

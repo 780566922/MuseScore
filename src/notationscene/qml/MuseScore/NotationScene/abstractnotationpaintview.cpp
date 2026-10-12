@@ -691,6 +691,13 @@ void AbstractNotationPaintView::showContextMenu(const ElementType& elementType, 
         _pos = QPointF(width() / 2, height() / 2);
     }
 
+    //! NOTE The clip is not part of the score, so it brings up a menu of its
+    //! own rather than the one for the element under the pointer.
+    if (m_audioClipOverlay && m_audioClipOverlay->hitTest(toLogical(_pos))) {
+        emit showAudioClipContextMenuRequested(_pos);
+        return;
+    }
+
     emit showContextMenuRequested(static_cast<int>(elementType), _pos);
 }
 
@@ -784,8 +791,12 @@ void AbstractNotationPaintView::paint(QPainter* qp)
     painter->setWorldTransform(m_matrix * guiScalingCompensation);
 
     const bool isPrinting = publishMode() || m_inputController->readonly();
-    const bool isAutomation = automationMode();
-    notation()->painting()->paintView(painter, toLogical(rect), isPrinting, isAutomation);
+
+    //! NOTE The clip lies over the score and is lined up against it by eye, so
+    //! while the clip is shown the score is drawn faint - the way it is drawn
+    //! while automation is edited - and the clip stands out against it.
+    const bool dimScore = automationMode() || audioClipAlignMode();
+    notation()->painting()->paintView(painter, toLogical(rect), isPrinting, dimScore);
 
     const INotationNoteInputPtr noteInput = notationNoteInput();
     if (noteInput->isNoteInputMode() && !publishMode()) {
@@ -1876,6 +1887,11 @@ void AbstractNotationPaintView::setPublishMode(bool arg)
 bool AbstractNotationPaintView::automationMode() const
 {
     return notationAutomation() ? notationAutomation()->isAutomationModeEnabled() : false;
+}
+
+bool AbstractNotationPaintView::audioClipAlignMode() const
+{
+    return m_audioClipOverlay && m_audioClipOverlay->isVisible() && m_audioClipOverlay->isValid();
 }
 
 bool AbstractNotationPaintView::isMainView() const

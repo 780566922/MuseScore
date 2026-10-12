@@ -171,6 +171,7 @@ public:
 
 signals:
     void showContextMenuRequested(int elementType, const QPointF& viewPos);
+    void showAudioClipContextMenuRequested(const QPointF& viewPos);
     void hideContextMenuRequested();
 
     void showSearchRequested();
@@ -241,6 +242,7 @@ private:
     muse::RectF correctDrawRect(const muse::RectF& rect) const;
 
     // Audio clip
+    bool audioClipAlignMode() const;
     bool isAudioClipModifierHeld(Qt::KeyboardModifiers modifiers) const;
     bool tryBeginAudioClipDrag(QMouseEvent* event);
     bool updateAudioClipDrag(QMouseEvent* event);

@@ -49,13 +49,18 @@ using namespace mu::engraving;
 namespace mu::notation {
 //! How many values the envelope is asked for, and how tall the strip is; both
 //! chosen so that the clip reads the same at any zoom level.
-static constexpr size_t CLIP_WAVE_BUCKETS = 1500;
+static constexpr size_t CLIP_WAVE_BUCKETS = 8000;
 static constexpr double LANE_HEIGHT_SPATIUMS = 5.0;
 
 //! NOTE Chosen to read on both the light and the dark score. The wash over the
 //! staves stays see-through, so that what is underneath it can still be lined
 //! up against, while everything drawn on top of the wash is opaque.
 static const QColor CLIP_COLOR = QColor(26, 118, 214);
+
+//! NOTE Drawn on top of the wash: the wave, the edges and the beats, which are
+//! what has to be read at a glance, so they are darker than the wash rather
+//! than the same colour as it.
+static const QColor CLIP_INK = QColor(10, 62, 132);
 
 AudioClipOverlay::AudioClipOverlay(const modularity::ContextPtr& iocCtx)
     : muse::Contextable(iocCtx), m_probe(iocCtx)
@@ -178,6 +183,15 @@ void AudioClipOverlay::rebuildSpans()
                 Span span;
                 span.lane = RectF(x0, band.top() - LANE_HEIGHT_SPATIUMS * m_spatium * 0.5,
                                   x1 - x0, LANE_HEIGHT_SPATIUMS * m_spatium);
+                //! NOTE Where the beats fall is found now rather than when the
+                //! strip is drawn, so that a redraw costs nothing for it.
+                for (int tick = measureStart + Constants::DIVISION; tick < measureEnd; tick += Constants::DIVISION) {
+                    const double beatX = xForTick(tick);
+                    if (std::isfinite(beatX) && beatX > x0 && beatX < x1) {
+                        span.beatXs.push_back(beatX);
+                    }
+                }
+
                 span.peakFrom = fractionAt(from);
                 span.peakTo = fractionAt(to);
                 m_spans.push_back(span);
@@ -231,6 +245,23 @@ double AudioClipOverlay::peakAt(const Span& span, double fraction) const
     return m_wave.peaks[index];
 }
 
+void AudioClipOverlay::paintBeatLines(muse::draw::Painter* painter, const Span& span, const QColor& color, double width) const
+{
+    if (span.beatXs.empty()) {
+        return;
+    }
+
+    std::vector<LineF> beats;
+    beats.reserve(span.beatXs.size());
+
+    for (const double x : span.beatXs) {
+        beats.emplace_back(PointF(x, span.lane.top()), PointF(x, span.lane.bottom()));
+    }
+
+    painter->setPen(Pen(color, width, PenStyle::SolidLine, PenCapStyle::FlatCap, PenJoinStyle::MiterJoin));
+    painter->drawLines(beats);
+}
+
 void AudioClipOverlay::paint(muse::draw::Painter* painter)
 {
     if (m_spans.empty() || !isVisible()) {
@@ -240,11 +271,15 @@ void AudioClipOverlay::paint(muse::draw::Painter* painter)
     QColor fill = CLIP_COLOR;
     fill.setAlpha(m_dragging ? 150 : 95);
 
-    QColor line = CLIP_COLOR;
+    QColor line = CLIP_INK;
     line.setAlpha(255);
 
-    const double edgeWidth = std::max(0.12 * m_spatium, 0.12);
-    const double waveWidth = std::max(0.10 * m_spatium, 0.10);
+    QColor beat = CLIP_INK;
+    beat.setAlpha(105);
+
+    const double edgeWidth = std::max(0.14 * m_spatium, 0.14);
+    const double waveWidth = std::max(0.13 * m_spatium, 0.13);
+    const double beatWidth = std::max(0.07 * m_spatium, 0.07);
 
     std::vector<LineF> waves;
 
@@ -255,16 +290,20 @@ void AudioClipOverlay::paint(muse::draw::Painter* painter)
         painter->setBrush(fill);
         painter->drawRoundedRect(lane, 0.5 * m_spatium, 0.5 * m_spatium);
 
-        const size_t pointCount = size_t(std::clamp(lane.width() / (m_spatium * 0.25), 2.0, 1500.0));
+        //! NOTE The beats are put where the score puts them, so that a peak in
+        //! the clip can be lined up with the beat it is meant to fall on.
+        paintBeatLines(painter, span, beat, beatWidth);
+
+        const size_t pointCount = size_t(std::clamp(lane.width() / (m_spatium * 0.15), 2.0, 3000.0));
         const double centerY = lane.center().y();
-        const double maxAmplitude = lane.height() * 0.46;
+        const double maxAmplitude = lane.height() * 0.48;
 
         waves.clear();
         waves.reserve(pointCount);
 
         for (size_t point = 0; point < pointCount; ++point) {
             const double fraction = double(point) / double(pointCount - 1);
-            const double amplitude = std::max(peakAt(span, fraction) * maxAmplitude, 0.04 * m_spatium);
+            const double amplitude = std::max(peakAt(span, fraction) * maxAmplitude, 0.02 * m_spatium);
             const double x = lane.left() + fraction * lane.width();
 
             waves.emplace_back(PointF(x, centerY - amplitude), PointF(x, centerY + amplitude));

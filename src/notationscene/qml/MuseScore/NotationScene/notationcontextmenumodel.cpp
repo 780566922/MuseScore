@@ -39,6 +39,7 @@
 #include "notationscene/notationcommands.h"
 #include "palette/palettecommands.h"
 #include "instrumentsscene/instrumentscommands.h"
+#include "playback/playbackcommands.h"
 
 #include "widgets/editstyleutils.h"
 
@@ -60,6 +61,17 @@ void NotationContextMenuModel::loadItems(int elementType)
         items << makeSeparator()
               << makeMenu(TranslatableString::untranslatable("Automation type"), makeAutomationTypeItems());
     }
+
+    setItems(items);
+}
+
+void NotationContextMenuModel::loadAudioClipItems()
+{
+    AbstractMenuModel::load();
+
+    MenuItemList items {
+        makeMenuItem(mu::playback::DETACH_AUDIO_CLIP_COMMAND),
+    };
 
     setItems(items);
 }
