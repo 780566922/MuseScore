@@ -43,6 +43,7 @@ void NotationToolBarModel::load()
     std::vector<rcommand::Command> commands = {
         OPEN_PARTS_COMMAND,
         appshell::DOCK_TOGGLE_MIXER_COMMAND,
+        TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND,
         TOGGLE_AUTOMATION_COMMAND
     };
 

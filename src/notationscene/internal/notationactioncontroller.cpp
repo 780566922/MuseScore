@@ -587,6 +587,10 @@ void NotationActionController::init()
                     VoiceAssignment::ALL_VOICE_IN_STAFF);
 
     registerCommand(TOGGLE_AUTOMATION_COMMAND, &Controller::toggleAutomation);
+
+    registerCommand(TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND, [this]() {
+        sceneConfiguration()->setAudioClipVisible(!sceneConfiguration()->isAudioClipVisible());
+    });
     registerCommandWithParams(SELECT_AUTOMATION_TYPE_COMMAND, &Controller::selectAutomationType);
 
     // TAB

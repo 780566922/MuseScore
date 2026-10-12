@@ -42,6 +42,10 @@ public:
     void setIsLimitCanvasScrollArea(bool limited) override;
     muse::async::Notification isLimitCanvasScrollAreaChanged() const override;
 
+    bool isAudioClipVisible() const override;
+    void setAudioClipVisible(bool visible) override;
+    muse::async::Notification audioClipVisibleChanged() const override;
+
     muse::ValCh<int> pianoKeyboardNumberOfKeys() const override;
     void setPianoKeyboardNumberOfKeys(int number) override;
 
@@ -68,6 +72,7 @@ public:
 private:
     muse::async::Notification m_isSmoothPanningChanged;
     muse::async::Notification m_isLimitCanvasScrollAreaChanged;
+    muse::async::Notification m_audioClipVisibleChanged;
     muse::ValCh<int> m_pianoKeyboardNumberOfKeys;
     muse::async::Notification m_percussionPanelUseNotationPreviewChanged;
     muse::async::Notification m_percussionPanelAutoShowModeChanged;

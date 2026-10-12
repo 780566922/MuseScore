@@ -2938,6 +2938,13 @@ static const std::vector<CommandInfo> s_commandInfos = {
         Decoration(IconCode::Code::AUTOMATION, rcommand::Checkable::Yes)
     },
     CommandInfo {
+        TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND,
+        TranslatableString("action", "Audio clip"),
+        TranslatableString("action", "Show the audio file played along with the score"),
+        InputSchema(),
+        Decoration(IconCode::Code::AUDIO, rcommand::Checkable::Yes)
+    },
+    CommandInfo {
         SELECT_AUTOMATION_TYPE_COMMAND,
         TranslatableString::untranslatable("Automation type"),
         TranslatableString::untranslatable("Select automation type"),

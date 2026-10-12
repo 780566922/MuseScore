@@ -44,6 +44,12 @@ public:
     virtual void setIsLimitCanvasScrollArea(bool limited) = 0;
     virtual muse::async::Notification isLimitCanvasScrollAreaChanged() const = 0;
 
+    //! Whether the audio clip attached to the score is drawn over it. The clip
+    //! plays back either way; only its strip is shown or hidden.
+    virtual bool isAudioClipVisible() const = 0;
+    virtual void setAudioClipVisible(bool visible) = 0;
+    virtual muse::async::Notification audioClipVisibleChanged() const = 0;
+
     virtual muse::ValCh<int> pianoKeyboardNumberOfKeys() const = 0;
     virtual void setPianoKeyboardNumberOfKeys(int number) = 0;
 

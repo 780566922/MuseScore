@@ -563,6 +563,9 @@ inline static const muse::rcommand::Command SHOW_SEARCH_COMMAND("command://notat
 // piano keyboard commands
 inline static const muse::rcommand::Command PIANO_KEYBOARD_SET_NUMBER_OF_KEYS_COMMAND("command://notation/piano-keyboard/set-number-of-keys");
 
+// audio clip commands
+inline static const muse::rcommand::Command TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND("command://notation/toggle-audio-clip-visible");
+
 // diagnostic commands
 inline static const muse::rcommand::Command DIAGNOSTIC_VIEW_REDRAW_COMMAND("command://notation/diagnostic/view-redraw");
 

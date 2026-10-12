@@ -38,6 +38,8 @@ static const Settings::Key PLAYBACK_SMOOTH_PANNING(module_name, "application/pla
 
 static const Settings::Key IS_LIMIT_CANVAS_SCROLL_AREA_KEY(module_name, "ui/canvas/scroll/limitScrollArea");
 
+static const Settings::Key AUDIO_CLIP_VISIBLE(module_name, "ui/audioClipVisible");
+
 static const Settings::Key PIANO_KEYBOARD_NUMBER_OF_KEYS(module_name,  "pianoKeyboard/numberOfKeys");
 
 static const Settings::Key PERCUSSION_PANEL_USE_NOTATION_PREVIEW_KEY(module_name,  "ui/percussionPanelUseNotationPreview");
@@ -62,6 +64,14 @@ void NotationSceneConfiguration::init()
     settings()->setDefaultValue(IS_LIMIT_CANVAS_SCROLL_AREA_KEY, Val(false));
     settings()->valueChanged(IS_LIMIT_CANVAS_SCROLL_AREA_KEY).onReceive(this, [this](const Val&) {
         m_isLimitCanvasScrollAreaChanged.notify();
+    });
+
+    //! NOTE Hidden to begin with: the strip is something to ask for, and it
+    //! covers part of the score, but the clip is heard whether or not it is
+    //! drawn.
+    settings()->setDefaultValue(AUDIO_CLIP_VISIBLE, Val(false));
+    settings()->valueChanged(AUDIO_CLIP_VISIBLE).onReceive(this, [this](const Val&) {
+        m_audioClipVisibleChanged.notify();
     });
 
     settings()->setDefaultValue(PIANO_KEYBOARD_NUMBER_OF_KEYS, Val(88));
@@ -124,6 +134,21 @@ void NotationSceneConfiguration::setIsLimitCanvasScrollArea(bool limited)
 Notification NotationSceneConfiguration::isLimitCanvasScrollAreaChanged() const
 {
     return m_isLimitCanvasScrollAreaChanged;
+}
+
+bool NotationSceneConfiguration::isAudioClipVisible() const
+{
+    return settings()->value(AUDIO_CLIP_VISIBLE).toBool();
+}
+
+void NotationSceneConfiguration::setAudioClipVisible(bool visible)
+{
+    settings()->setSharedValue(AUDIO_CLIP_VISIBLE, Val(visible));
+}
+
+Notification NotationSceneConfiguration::audioClipVisibleChanged() const
+{
+    return m_audioClipVisibleChanged;
 }
 
 ValCh<int> NotationSceneConfiguration::pianoKeyboardNumberOfKeys() const

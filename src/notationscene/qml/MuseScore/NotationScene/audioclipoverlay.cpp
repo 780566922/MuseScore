@@ -50,10 +50,12 @@ namespace mu::notation {
 //! How many values the envelope is asked for, and how tall the strip is; both
 //! chosen so that the clip reads the same at any zoom level.
 static constexpr size_t CLIP_WAVE_BUCKETS = 1500;
-static constexpr double LANE_HEIGHT_SPATIUMS = 3.0;
+static constexpr double LANE_HEIGHT_SPATIUMS = 5.0;
 
-//! NOTE Chosen to read on both the light and the dark score.
-static const QColor CLIP_COLOR = QColor(70, 150, 240);
+//! NOTE Chosen to read on both the light and the dark score. The wash over the
+//! staves stays see-through, so that what is underneath it can still be lined
+//! up against, while everything drawn on top of the wash is opaque.
+static const QColor CLIP_COLOR = QColor(26, 118, 214);
 
 AudioClipOverlay::AudioClipOverlay(const modularity::ContextPtr& iocCtx)
     : muse::Contextable(iocCtx), m_probe(iocCtx)
@@ -61,6 +63,12 @@ AudioClipOverlay::AudioClipOverlay(const modularity::ContextPtr& iocCtx)
     if (waveProvider()) {
         waveProvider()->clipWaveChanged().onNotify(this, [this]() {
             update();
+            m_clipChanged.notify();
+        });
+    }
+
+    if (configuration()) {
+        configuration()->audioClipVisibleChanged().onNotify(this, [this]() {
             m_clipChanged.notify();
         });
     }
@@ -88,6 +96,11 @@ void AudioClipOverlay::update()
     }
 
     rebuildSpans();
+}
+
+bool AudioClipOverlay::isVisible() const
+{
+    return configuration() && configuration()->isAudioClipVisible();
 }
 
 bool AudioClipOverlay::isValid() const
@@ -220,18 +233,18 @@ double AudioClipOverlay::peakAt(const Span& span, double fraction) const
 
 void AudioClipOverlay::paint(muse::draw::Painter* painter)
 {
-    if (m_spans.empty()) {
+    if (m_spans.empty() || !isVisible()) {
         return;
     }
 
     QColor fill = CLIP_COLOR;
-    fill.setAlpha(m_dragging ? 120 : 70);
+    fill.setAlpha(m_dragging ? 150 : 95);
 
     QColor line = CLIP_COLOR;
-    line.setAlpha(220);
+    line.setAlpha(255);
 
-    const double edgeWidth = std::max(0.1 * m_spatium, 0.1);
-    const double waveWidth = std::max(0.06 * m_spatium, 0.06);
+    const double edgeWidth = std::max(0.12 * m_spatium, 0.12);
+    const double waveWidth = std::max(0.10 * m_spatium, 0.10);
 
     std::vector<LineF> waves;
 
@@ -244,14 +257,14 @@ void AudioClipOverlay::paint(muse::draw::Painter* painter)
 
         const size_t pointCount = size_t(std::clamp(lane.width() / (m_spatium * 0.25), 2.0, 1500.0));
         const double centerY = lane.center().y();
-        const double maxAmplitude = lane.height() * 0.42;
+        const double maxAmplitude = lane.height() * 0.46;
 
         waves.clear();
         waves.reserve(pointCount);
 
         for (size_t point = 0; point < pointCount; ++point) {
             const double fraction = double(point) / double(pointCount - 1);
-            const double amplitude = std::max(peakAt(span, fraction) * maxAmplitude, 0.05 * m_spatium);
+            const double amplitude = std::max(peakAt(span, fraction) * maxAmplitude, 0.04 * m_spatium);
             const double x = lane.left() + fraction * lane.width();
 
             waves.emplace_back(PointF(x, centerY - amplitude), PointF(x, centerY + amplitude));
@@ -297,6 +310,10 @@ void AudioClipOverlay::paint(muse::draw::Painter* painter)
 
 bool AudioClipOverlay::hitTest(const PointF& logicalPos) const
 {
+    if (!isVisible()) {
+        return false;
+    }
+
     for (const Span& span : m_spans) {
         //! NOTE The strip is thin, so a little slack makes it easier to grab.
         if (span.lane.adjusted(0.0, -m_spatium, 0.0, m_spatium).contains(logicalPos)) {

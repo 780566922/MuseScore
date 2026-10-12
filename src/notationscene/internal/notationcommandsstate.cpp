@@ -355,6 +355,10 @@ void NotationCommandsState::init()
         updateCommandStates(DEBUG_COMMANDS);
     });
 
+    sceneConfiguration()->audioClipVisibleChanged().onNotify(this, [this]() {
+        updateCommandStates({ TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND });
+    });
+
     updateCommandStates();
 }
 
@@ -373,6 +377,7 @@ void NotationCommandsState::deinit()
     controller()->notationStyleChanged().disconnect(this);
     controller()->automationModeEnabledChanged().disconnect(this);
     controller()->debuggingOptionsChanged().disconnect(this);
+    sceneConfiguration()->audioClipVisibleChanged().disconnect(this);
 }
 
 void NotationCommandsState::updateCommandStates(const std::vector<Command>& commands)
@@ -489,6 +494,10 @@ CommandState NotationCommandsState::doCommandState(const Command& command) const
 
     if (command == TOGGLE_AUTOMATION_COMMAND) {
         return CommandState(true, controller()->isAutomationModeEnabled());
+    }
+
+    if (command == TOGGLE_AUDIO_CLIP_VISIBLE_COMMAND) {
+        return CommandState(true, sceneConfiguration()->isAudioClipVisible());
     }
 
     if (muse::contains(DEBUG_COMMANDS, command)) {

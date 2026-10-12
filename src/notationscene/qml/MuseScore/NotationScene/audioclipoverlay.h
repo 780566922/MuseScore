@@ -28,6 +28,8 @@
 #include "async/asyncable.h"
 #include "draw/types/geometry.h"
 
+#include "notationscene/inotationsceneconfiguration.h"
+
 #include "notation/iaudioclipwaveprovider.h"
 #include "notation/inotation_fwd.h"
 
@@ -46,9 +48,14 @@ namespace mu::notation {
 //! score is played back or exported, and comes back when the clip is moved back
 //! over the score. A marker on the strip points out when an end of the clip has
 //! been pushed out of the score in this way.
+//!
+//! The strip is only drawn while it is asked for: it can be turned off so that
+//! nothing lies over the score. The clip is heard either way, and a strip that
+//! is not drawn cannot be dragged.
 class AudioClipOverlay : public muse::Contextable, public muse::async::Asyncable
 {
     muse::ContextInject<IAudioClipWaveProvider> waveProvider = { this };
+    muse::GlobalInject<INotationSceneConfiguration> configuration;
 
 public:
     AudioClipOverlay(const muse::modularity::ContextPtr& iocCtx);
@@ -59,6 +66,9 @@ public:
     void update();
 
     void paint(muse::draw::Painter* painter);
+
+    //! Whether the strip is asked for, and so is drawn and can be grabbed.
+    bool isVisible() const;
 
     bool isValid() const;
     bool isDragging() const;
