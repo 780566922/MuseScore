@@ -47,7 +47,6 @@
 #include "notationruler.h"
 #include "playbackcursor.h"
 #include "loopmarker.h"
-#include "audioclipoverlay.h"
 #include "continuouspanel.h"
 #include "abstractelementpopupmodel.h"
 
@@ -171,7 +170,6 @@ public:
 
 signals:
     void showContextMenuRequested(int elementType, const QPointF& viewPos);
-    void showAudioClipContextMenuRequested(const QPointF& viewPos);
     void hideContextMenuRequested();
 
     void showSearchRequested();
@@ -241,13 +239,6 @@ private:
 
     muse::RectF correctDrawRect(const muse::RectF& rect) const;
 
-    // Audio clip
-    bool audioClipAlignMode() const;
-    bool isAudioClipModifierHeld(Qt::KeyboardModifiers modifiers) const;
-    bool tryBeginAudioClipDrag(QMouseEvent* event);
-    bool updateAudioClipDrag(QMouseEvent* event);
-    bool commitAudioClipDrag(QMouseEvent* event);
-
     // Input
     void wheelEvent(QWheelEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -311,7 +302,6 @@ private:
     std::unique_ptr<NotationRuler> m_ruler;
     std::unique_ptr<LoopMarker> m_loopInMarker;
     std::unique_ptr<LoopMarker> m_loopOutMarker;
-    std::unique_ptr<AudioClipOverlay> m_audioClipOverlay;
     std::unique_ptr<ContinuousPanel> m_continuousPanel;
 
     qreal m_previousVerticalScrollPosition = 0;

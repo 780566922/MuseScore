@@ -36,8 +36,6 @@ qt_add_qml_module(notationscene_qml
         abstractelementpopupmodel.h
         abstractnotationpaintview.cpp
         abstractnotationpaintview.h
-        audioclipoverlay.cpp
-        audioclipoverlay.h
         continuouspanel.cpp
         continuouspanel.h
         editgridsizedialogmodel.cpp
@@ -163,11 +161,14 @@ qt_add_qml_module(notationscene_qml
         styledialog/tupletcenteringselectormodel.h
         styledialog/voltaspagemodel.cpp
         styledialog/voltaspagemodel.h
+        audiocliptrack/audiocliptrackview.cpp
+        audiocliptrack/audiocliptrackview.h
         timelineview.cpp
         timelineview.h
 
     QML_FILES
         AbstractElementPopup.qml
+        AudioClipPanel.qml
         ConcertPitchControl.qml
         EditGridSizeDialog.qml
         EditPercussionShortcutDialog.qml

@@ -565,6 +565,40 @@ DockPage {
                     }
                 }
             }
+        },
+
+        DockPanel {
+            id: audioPanel
+
+            objectName: root.pageModel.audioPanelName()
+            title: qsTrc("appshell", "Audio")
+
+            height: 160
+            minimumHeight: root.horizontalPanelMinHeight
+            maximumHeight: root.horizontalPanelMaxHeight
+
+            minimumWidth: root.panelMinDimension
+            maximumWidth: root.panelMaxDimension
+
+            groupName: root.horizontalPanelsGroup
+
+            //! NOTE: hidden by default, and opened when a clip is attached
+            visible: false
+
+            location: Location.Bottom
+
+            dropDestinations: root.horizontalPanelDropDestinations
+
+            navigationSection: root.navigationPanelSec(audioPanel.location)
+
+            AudioClipPanel {
+                navigationSection: audioPanel.navigationSection
+                contentNavigationPanelOrderStart: audioPanel.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    audioPanel.contextMenuModel = contextMenuModel
+                }
+            }
         }
     ]
 

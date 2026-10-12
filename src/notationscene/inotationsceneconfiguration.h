@@ -44,8 +44,8 @@ public:
     virtual void setIsLimitCanvasScrollArea(bool limited) = 0;
     virtual muse::async::Notification isLimitCanvasScrollAreaChanged() const = 0;
 
-    //! Whether the audio clip attached to the score is drawn over it. The clip
-    //! plays back either way; only its strip is shown or hidden.
+    //! Whether the panel the audio clip is drawn in is asked for. The clip
+    //! plays back either way; only the panel is opened or closed.
     virtual bool isAudioClipVisible() const = 0;
     virtual void setAudioClipVisible(bool visible) = 0;
     virtual muse::async::Notification audioClipVisibleChanged() const = 0;

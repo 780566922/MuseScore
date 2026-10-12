@@ -33,6 +33,7 @@
 #include "extensions/iextensionsprovider.h"
 #include "context/iglobalcontext.h"
 #include "notationscene/inotationsceneconfiguration.h"
+#include "notation/iaudioclipwaveprovider.h"
 #include "braille/ibrailleconfiguration.h"
 #include "iappshellstate.h"
 #include "internal/iappshellcommandscontroller.h"
@@ -55,6 +56,7 @@ class NotationPageModel : public QObject, public muse::Contextable, public muse:
     muse::ContextInject<muse::dock::IDockWindowProvider> dockWindowProvider = { this };
     muse::ContextInject<context::IGlobalContext> globalContext = { this };
     muse::ContextInject<IAppshellCommandsController> commandsController = { this };
+    muse::ContextInject<notation::IAudioClipWaveProvider> audioClipWaveProvider = { this };
 public:
     explicit NotationPageModel(QObject* parent = nullptr);
 
@@ -79,6 +81,7 @@ public:
     Q_INVOKABLE QString pianoKeyboardPanelName() const;
     Q_INVOKABLE QString timelinePanelName() const;
     Q_INVOKABLE QString percussionPanelName() const;
+    Q_INVOKABLE QString audioPanelName() const;
 
     Q_INVOKABLE QString statusBarName() const;
 
@@ -94,11 +97,18 @@ private:
     void scheduleUpdatePercussionPanelVisibility();
     void doUpdatePercussionPanelVisibility();
 
+    //! NOTE The audio panel is of no use without an audio clip, so it is opened
+    //! when one is attached and closed when it is taken away again, and never
+    //! otherwise, so that a score without a clip is not given a panel for one.
+    void scheduleUpdateAudioPanelVisibility();
+    void doUpdateAudioPanelVisibility();
+
     void scheduleUpdateExtensionsToolBarVisibility();
     void doUpdateExtensionsToolBarVisibility();
 
     bool m_inited = false;
     bool m_updatePercussionPanelVisibilityScheduled = false;
+    bool m_updateAudioPanelVisibilityScheduled = false;
     bool m_updateExtensionsToolBarVisibilityScheduled = false;
 };
 }

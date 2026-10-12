@@ -66,10 +66,10 @@ void NotationSceneConfiguration::init()
         m_isLimitCanvasScrollAreaChanged.notify();
     });
 
-    //! NOTE Hidden to begin with: the strip is something to ask for, and it
-    //! covers part of the score, but the clip is heard whether or not it is
-    //! drawn.
-    settings()->setDefaultValue(AUDIO_CLIP_VISIBLE, Val(false));
+    //! NOTE Asked for to begin with: the panel is opened by itself when a clip
+    //! is attached, and stays out of the way when there is none. The clip is
+    //! heard whether or not the panel is open.
+    settings()->setDefaultValue(AUDIO_CLIP_VISIBLE, Val(true));
     settings()->valueChanged(AUDIO_CLIP_VISIBLE).onReceive(this, [this](const Val&) {
         m_audioClipVisibleChanged.notify();
     });

@@ -147,8 +147,6 @@ void AbstractNotationPaintView::load()
     m_loopInMarker = std::make_unique<LoopMarker>(LoopBoundaryType::LoopIn, iocContext());
     m_loopOutMarker = std::make_unique<LoopMarker>(LoopBoundaryType::LoopOut, iocContext());
 
-    m_audioClipOverlay = std::make_unique<AudioClipOverlay>(iocContext());
-
     m_continuousPanel = std::make_unique<ContinuousPanel>();
 
     m_inputController->setReadonly(m_readonly);
@@ -308,7 +306,6 @@ void AbstractNotationPaintView::onLoadNotation(INotationPtr)
     m_notation->notationChanged().onReceive(this, [this](const RectF& updateRect) {
         m_pageCache.clear();
         updateLoopMarkers();
-        m_audioClipOverlay->update();
         updateShadowNoteVisibility();
         scheduleRedraw(updateRect.isValid() ? fromLogical(updateRect) : RectF());
     });
@@ -395,11 +392,6 @@ void AbstractNotationPaintView::onLoadNotation(INotationPtr)
         scheduleRedraw();
     });
 
-    m_audioClipOverlay->clipChanged().onNotify(this, [this]() {
-        m_audioClipOverlay->update();
-        scheduleRedraw();
-    });
-
     m_notation->viewModeChanged().onNotify(this, [this]() {
         ensureViewportInsideScrollableArea();
     });
@@ -461,7 +453,6 @@ void AbstractNotationPaintView::onUnloadNotation(INotationPtr)
     interaction->dropChanged().disconnect(this);
     interaction->shadowNoteChanged().disconnect(this);
     notationPlayback()->loopBoundariesChanged().disconnect(this);
-    m_audioClipOverlay->clipChanged().disconnect(this);
     m_notation->viewModeChanged().disconnect(this);
     notationAutomation()->automationModeEnabledChanged().disconnect(this);
 
@@ -691,13 +682,6 @@ void AbstractNotationPaintView::showContextMenu(const ElementType& elementType, 
         _pos = QPointF(width() / 2, height() / 2);
     }
 
-    //! NOTE The clip is not part of the score, so it brings up a menu of its
-    //! own rather than the one for the element under the pointer.
-    if (m_audioClipOverlay && m_audioClipOverlay->hitTest(toLogical(_pos))) {
-        emit showAudioClipContextMenuRequested(_pos);
-        return;
-    }
-
     emit showContextMenuRequested(static_cast<int>(elementType), _pos);
 }
 
@@ -792,10 +776,7 @@ void AbstractNotationPaintView::paint(QPainter* qp)
 
     const bool isPrinting = publishMode() || m_inputController->readonly();
 
-    //! NOTE The clip lies over the score and is lined up against it by eye, so
-    //! while the clip is shown the score is drawn faint - the way it is drawn
-    //! while automation is edited - and the clip stands out against it.
-    const bool dimScore = automationMode() || audioClipAlignMode();
+    const bool dimScore = automationMode();
     notation()->painting()->paintView(painter, toLogical(rect), isPrinting, dimScore);
 
     const INotationNoteInputPtr noteInput = notationNoteInput();
@@ -810,8 +791,6 @@ void AbstractNotationPaintView::paint(QPainter* qp)
 
     m_loopInMarker->paint(painter);
     m_loopOutMarker->paint(painter);
-
-    m_audioClipOverlay->paint(painter);
 
     if (notation()->viewMode() == engraving::LayoutMode::LINE) {
         ContinuousPanel::NotationViewContext nvCtx;
@@ -1233,61 +1212,6 @@ bool AbstractNotationPaintView::doMoveCanvas(qreal dx, qreal dy)
     return true;
 }
 
-bool AbstractNotationPaintView::isAudioClipModifierHeld(Qt::KeyboardModifiers modifiers) const
-{
-    return modifiers.testFlag(Qt::ControlModifier)
-           || modifiers.testFlag(Qt::AltModifier)
-           || modifiers.testFlag(Qt::MetaModifier);
-}
-
-bool AbstractNotationPaintView::tryBeginAudioClipDrag(QMouseEvent* event)
-{
-    if (!m_audioClipOverlay || !m_audioClipOverlay->isValid() || readonly() || publishMode()) {
-        return false;
-    }
-
-    if (event->button() != Qt::LeftButton || !isAudioClipModifierHeld(event->modifiers())) {
-        return false;
-    }
-
-    const PointF logicPos = toLogical(event->pos());
-    if (!m_audioClipOverlay->hitTest(logicPos)) {
-        return false;
-    }
-
-    m_audioClipOverlay->beginDrag(logicPos);
-    return m_audioClipOverlay->isDragging();
-}
-
-bool AbstractNotationPaintView::updateAudioClipDrag(QMouseEvent* event)
-{
-    if (!m_audioClipOverlay || !m_audioClipOverlay->isDragging()) {
-        return false;
-    }
-
-    m_audioClipOverlay->dragTo(toLogical(event->pos()));
-    scheduleRedraw();
-    return true;
-}
-
-bool AbstractNotationPaintView::commitAudioClipDrag(QMouseEvent* event)
-{
-    UNUSED(event);
-
-    if (!m_audioClipOverlay || !m_audioClipOverlay->isDragging()) {
-        return false;
-    }
-
-    const int tick = m_audioClipOverlay->draggedTick();
-    m_audioClipOverlay->finishDrag();
-    scheduleRedraw();
-
-    //! NOTE Storing the clip is what moves it, and that is playback's business.
-    actionsDispatcher()->dispatch("move-audio-clip", ActionData::make_arg1<int>(tick));
-
-    return true;
-}
-
 void AbstractNotationPaintView::scheduleRedraw(const muse::RectF& rect)
 {
     muse::RectF redrawRect = correctDrawRect(rect);
@@ -1422,11 +1346,6 @@ void AbstractNotationPaintView::mousePressEvent(QMouseEvent* event)
     TRACEFUNC;
     forceFocusIn();
 
-    if (tryBeginAudioClipDrag(event)) {
-        event->accept();
-        return;
-    }
-
     if (isInited()) {
         m_inputController->mousePressEvent(event);
     }
@@ -1435,11 +1354,6 @@ void AbstractNotationPaintView::mousePressEvent(QMouseEvent* event)
 void AbstractNotationPaintView::mouseMoveEvent(QMouseEvent* event)
 {
     TRACEFUNC;
-    if (updateAudioClipDrag(event)) {
-        event->accept();
-        return;
-    }
-
     if (isInited()) {
         m_inputController->mouseMoveEvent(event);
     }
@@ -1457,11 +1371,6 @@ void AbstractNotationPaintView::mouseDoubleClickEvent(QMouseEvent* event)
 
 void AbstractNotationPaintView::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (commitAudioClipDrag(event)) {
-        event->accept();
-        return;
-    }
-
     if (isInited()) {
         m_inputController->mouseReleaseEvent(event);
     }
@@ -1625,7 +1534,6 @@ void AbstractNotationPaintView::setNotation(INotationPtr notation)
         m_playbackCursor->setNotation(m_notation);
         m_loopInMarker->setNotation(m_notation);
         m_loopOutMarker->setNotation(m_notation);
-        m_audioClipOverlay->setNotation(m_notation);
     }
 }
 
@@ -1887,11 +1795,6 @@ void AbstractNotationPaintView::setPublishMode(bool arg)
 bool AbstractNotationPaintView::automationMode() const
 {
     return notationAutomation() ? notationAutomation()->isAutomationModeEnabled() : false;
-}
-
-bool AbstractNotationPaintView::audioClipAlignMode() const
-{
-    return m_audioClipOverlay && m_audioClipOverlay->isVisible() && m_audioClipOverlay->isValid();
 }
 
 bool AbstractNotationPaintView::isMainView() const

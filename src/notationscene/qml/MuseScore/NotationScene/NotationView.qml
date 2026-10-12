@@ -159,11 +159,6 @@ FocusScope {
                         contextMenuLoader.show(viewPos, contextMenuModel.items)
                     }
 
-                    onShowAudioClipContextMenuRequested: function (viewPos) {
-                        contextMenuModel.loadAudioClipItems()
-                        contextMenuLoader.show(viewPos, contextMenuModel.items)
-                    }
-
                     onHideContextMenuRequested: {
                         contextMenuLoader.close()
                     }

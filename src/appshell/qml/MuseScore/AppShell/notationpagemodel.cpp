@@ -73,7 +73,14 @@ void NotationPageModel::init()
     globalContext()->currentNotationChanged().onNotify(this, [this]() {
         onNotationChanged();
         scheduleUpdatePercussionPanelVisibility();
+        scheduleUpdateAudioPanelVisibility();
     });
+
+    if (audioClipWaveProvider()) {
+        audioClipWaveProvider()->clipWaveChanged().onNotify(this, [this]() {
+            scheduleUpdateAudioPanelVisibility();
+        });
+    }
 
     extensionsProvider()->manifestListChanged().onNotify(this, [this]() {
         scheduleUpdateExtensionsToolBarVisibility();
@@ -90,10 +97,15 @@ void NotationPageModel::init()
     onNotationChanged();
 
     scheduleUpdatePercussionPanelVisibility();
+    scheduleUpdateAudioPanelVisibility();
     scheduleUpdateExtensionsToolBarVisibility();
 
     notationSceneConfiguration()->percussionPanelAutoShowModeChanged().onNotify(this, [this]() {
         scheduleUpdatePercussionPanelVisibility();
+    });
+
+    notationSceneConfiguration()->audioClipVisibleChanged().onNotify(this, [this]() {
+        scheduleUpdateAudioPanelVisibility();
     });
 
     m_inited = true;
@@ -167,6 +179,11 @@ QString NotationPageModel::timelinePanelName() const
 QString NotationPageModel::percussionPanelName() const
 {
     return PERCUSSION_PANEL_NAME;
+}
+
+QString NotationPageModel::audioPanelName() const
+{
+    return AUDIO_PANEL_NAME;
 }
 
 QString NotationPageModel::statusBarName() const
@@ -307,6 +324,42 @@ void NotationPageModel::doUpdatePercussionPanelVisibility()
     }
 
     setPercussionPanelOpen(true);
+}
+
+void NotationPageModel::scheduleUpdateAudioPanelVisibility()
+{
+    if (m_updateAudioPanelVisibilityScheduled) {
+        return;
+    }
+
+    m_updateAudioPanelVisibilityScheduled = true;
+
+    //! NOTE: ensure we don't update it multiple times in succession
+    muse::async::Async::call(this, [this]() {
+        doUpdateAudioPanelVisibility();
+        m_updateAudioPanelVisibilityScheduled = false;
+    });
+}
+
+void NotationPageModel::doUpdateAudioPanelVisibility()
+{
+    TRACEFUNC;
+
+    const muse::dock::IDockWindow* window = dockWindowProvider()->window();
+    if (!window || !audioClipWaveProvider() || !globalContext() || !globalContext()->currentNotation()) {
+        return;
+    }
+
+    //! NOTE The panel is of no use without a clip, so it is opened by itself
+    //! when one is attached, and stays out of the way when there is none.
+    const bool open = audioClipWaveProvider()->clipWave(1).isValid()
+                      && notationSceneConfiguration()->isAudioClipVisible();
+
+    if (open == window->isDockOpen(AUDIO_PANEL_NAME)) {
+        return;
+    }
+
+    dispatcher()->dispatch("dock-set-open", ActionData::make_arg2<QString, bool>(AUDIO_PANEL_NAME, open));
 }
 
 void NotationPageModel::scheduleUpdateExtensionsToolBarVisibility()
