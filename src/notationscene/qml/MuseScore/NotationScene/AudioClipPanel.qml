@@ -17,6 +17,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 
 import Muse.Ui
 import Muse.UiComponents
@@ -41,6 +42,7 @@ Item {
         barLineColor: ui.theme.strokeColor
         beatLineColor: ui.theme.buttonColor
         markerColor: ui.theme.accentColor
+        playbackCursorColor: ui.theme.accentColor
     }
 
     StyledTextLabel {
@@ -48,6 +50,85 @@ Item {
         visible: !track.hasClip
         text: qsTrc("notation", "No audio. Drag an audio file onto the score to attach one.")
         color: ui.theme.fontPrimaryColor
+    }
+
+    //! NOTE Zooming is done with the wheel, or by pinching on a trackpad, but a
+    //! panel can swallow a wheel, so there is a way to do it by hand as well.
+    Rectangle {
+        id: zoomControls
+
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 4
+
+        width: zoomControlsRow.implicitWidth + 8
+        height: 28
+
+        visible: track.hasClip
+
+        color: ui.theme.backgroundPrimaryColor
+        opacity: 0.85
+        radius: 3
+
+        RowLayout {
+            id: zoomControlsRow
+
+            anchors.centerIn: parent
+            spacing: 2
+
+            FlatButton {
+                icon: IconCode.ZOOM_OUT
+                iconFont: ui.theme.toolbarIconsFont
+
+                width: height
+                height: 24
+                transparent: true
+
+                toolTipTitle: qsTrc("notation", "Zoom out")
+                accessible.name: qsTrc("notation", "Zoom out")
+
+                onClicked: {
+                    track.zoomOut()
+                }
+            }
+
+            FlatButton {
+                icon: IconCode.ZOOM_IN
+                iconFont: ui.theme.toolbarIconsFont
+
+                width: height
+                height: 24
+                transparent: true
+
+                toolTipTitle: qsTrc("notation", "Zoom in")
+                accessible.name: qsTrc("notation", "Zoom in")
+
+                onClicked: {
+                    track.zoomIn()
+                }
+            }
+
+            FlatButton {
+                text: qsTrc("notation", "Fit")
+
+                height: 24
+                transparent: true
+
+                toolTipTitle: qsTrc("notation", "Zoom to fit the whole score")
+                accessible.name: qsTrc("notation", "Zoom to fit the whole score")
+
+                onClicked: {
+                    track.zoomToFit()
+                }
+            }
+
+            StyledTextLabel {
+                Layout.leftMargin: 2
+
+                text: track.zoomPercentage + "%"
+                color: ui.theme.fontPrimaryColor
+            }
+        }
     }
 
     MouseArea {
