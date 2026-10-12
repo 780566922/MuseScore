@@ -39,6 +39,7 @@
 
 namespace mu::engraving {
 class Measure;
+class System;
 }
 
 namespace mu::notation {
@@ -54,6 +55,12 @@ namespace mu::notation {
 //! The strip is only drawn while it is asked for: it can be turned off so that
 //! nothing lies over the score. The clip is heard either way, and a strip that
 //! is not drawn cannot be dragged.
+//!
+//! It is drawn in one piece per staff line rather than in as many pieces as there
+//! are measures, because it is one sound; and everything drawn on it is read off
+//! the one map between ticks and places on the score that the score itself lays
+//! its notes out with, so the wave, the measures and the beats on the strip cannot
+//! drift away from one another.
 class AudioClipOverlay : public muse::Contextable, public muse::async::Asyncable
 {
     muse::ContextInject<IAudioClipWaveProvider> waveProvider = { this };
@@ -88,30 +95,52 @@ public:
     muse::async::Notification clipChanged() const { return m_clipChanged; }
 
 private:
-    struct Span {
-        muse::RectF lane;        //! where this piece of the clip is drawn, in logical coordinates
-        std::vector<double> beatXs; //! where the beats of the measure fall, in logical x
-        double peakFrom = 0.0;   //! which part of the envelope it covers, in [0, 1]
-        double peakTo = 1.0;
+    //! A tick, and the place on a staff line the score has put it at.
+    struct Anchor {
+        int tick = 0;
+        double x = 0.0;
     };
 
-    void rebuildSpans();
+    //! One staff line's worth of the clip: which stretch of the clip is drawn on
+    //! it, where, the ticks to places it is drawn through, and the marks on it.
+    struct Strip {
+        double bandTop = 0.0;           //! where the top of the staves of this staff line sits
+        int fromTick = 0;               //! the stretch of the clip drawn here, in score ticks
+        int toTick = 0;
+        double fromX = 0.0;             //! and where that stretch is drawn
+        double toX = 0.0;
+        std::vector<Anchor> anchors;    //! ticks to places, running left to right
+        std::vector<double> barXs;      //! where a measure begins, in places
+        std::vector<double> beatXs;     //! where a beat falls, in places
+    };
 
-    void paintBeatLines(muse::draw::Painter* painter, const Span& span, const QColor& color, double width) const;
-
-    double xForTick(int tick) const;
-    muse::RectF bandForTick(int tick) const;
+    void rebuildStrips();
+    void appendAnchors(std::vector<Anchor>& anchors, const engraving::Measure* measure) const;
+    void appendMarks(Strip& strip, const std::vector<const engraving::Measure*>& measures) const;
     double measureRightX(const engraving::Measure* measure) const;
-    double ticksPerUnitNear(int tick) const;
-    double peakAt(const Span& span, double fraction) const;
+
+    muse::RectF laneOf(const Strip& strip) const;
+
+    //! Where a tick falls between two anchors, and which tick falls at a place.
+    //! Both read the same line, so they undo one another.
+    double xForTick(const Strip& strip, double tick) const;
+    double tickForX(const std::vector<Anchor>& anchors, double x) const;
+
+    //! The loudest the clip gets between two of its ticks.
+    float peakBetween(int firstTick, int lastTick) const;
+
+    void paintMarks(muse::draw::Painter* painter, const Strip& strip, const std::vector<double>& xs,
+                    double inset, const QColor& color, double width) const;
+    void paintWave(muse::draw::Painter* painter, const Strip& strip, double pixelsPerUnit,
+                   const QColor& color, double width) const;
 
     INotationPtr m_notation;
-    //! NOTE Borrowed to turn a tick into a place on the score; it is only ever
+    //! NOTE Borrowed to find where the staves of a staff line sit; it is only ever
     //! asked where a tick would be, and never drawn.
-    mutable PlaybackCursor m_probe;
+    PlaybackCursor m_probe;
 
     AudioClipWave m_wave;
-    std::vector<Span> m_spans;
+    std::vector<Strip> m_strips;
     double m_spatium = 1.0;
 
     //! Whether an end of the clip has been slid out of the score, and so is
@@ -120,9 +149,12 @@ private:
     bool m_offScoreEnd = false;
 
     bool m_dragging = false;
-    muse::PointF m_dragStartPos;
+    //! NOTE What the pointer is over when the drag begins is what it stays over,
+    //! so the drag is followed through the places of the staff line it was grabbed
+    //! on, taken then and kept for the rest of the drag.
+    std::vector<Anchor> m_dragAnchors;
+    int m_dragAnchorTick = 0;
     int m_dragDeltaTicks = 0;
-    double m_ticksPerUnit = 1.0;
 
     muse::async::Notification m_clipChanged;
 };

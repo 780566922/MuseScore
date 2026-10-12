@@ -40,9 +40,10 @@ static const std::string PLAYBACK_MODULE_NAME("playback");
 
 //! How much of the clip one value of the drawn envelope stands for, and the
 //! most values an envelope is allowed to hold; a clip of any length then costs
-//! about the same to draw.
+//! about the same to draw. The values are what the wave is drawn from, so they
+//! are kept finer than the screen can show even for a long clip.
 static constexpr double ENVELOPE_BUCKET_SECS = 0.01;
-static constexpr size_t MAX_ENVELOPE_BUCKETS = 20000;
+static constexpr size_t MAX_ENVELOPE_BUCKETS = 200000;
 
 static AudioClipResolver::Envelope makeEnvelope(const codec::AudioData& data)
 {
