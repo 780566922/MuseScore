@@ -57,6 +57,7 @@ void PlaybackCommandsController::init()
     registerCommand(PAUSE_AND_SELECT_COMMAND, &IPlaybackController::pause, true);
     registerCommand(STOP_COMMAND, &IPlaybackController::stop);
     registerCommand(REWIND_COMMAND, [this](const rcommand::Params& params) { return rewind(params); });
+    registerCommand(SEEK_TO_COMMAND, [this](const rcommand::Params& params) { return seekTo(params); });
     registerCommand(LOOP_TOGGLE_COMMAND, &IPlaybackController::toggleLoopPlayback);
     registerCommand(LOOP_IN_COMMAND, &IPlaybackController::addLoopBoundary, LoopBoundaryType::LoopIn);
     registerCommand(LOOP_OUT_COMMAND, &IPlaybackController::addLoopBoundary, LoopBoundaryType::LoopOut);
@@ -89,6 +90,7 @@ void PlaybackCommandsController::init()
             { "pause-and-select", PAUSE_AND_SELECT_COMMAND, {} },
             { "stop", STOP_COMMAND, {} },
             { "rewind", REWIND_COMMAND, {} },
+            { "seek-to", SEEK_TO_COMMAND, make_conv({ { "position", param<double> } }) },
             { "loop", LOOP_TOGGLE_COMMAND, {} },
             { "loop-in", LOOP_IN_COMMAND, {} },
             { "loop-out", LOOP_OUT_COMMAND, {} },
@@ -162,6 +164,19 @@ muse::Ret PlaybackCommandsController::rewind(const muse::rcommand::Params& param
 {
     double secs = params.at("position").toDouble();
     return playbackController()->rewind(secs_t(secs));
+}
+
+//! NOTE Unlike rewinding, which is asked for by the player's own bar, this is
+//! asked for by a place in the score having been picked out - a stretch of the
+//! audio track say - and it is not played from there unless play is asked for.
+muse::Ret PlaybackCommandsController::seekTo(const muse::rcommand::Params& params)
+{
+    auto search = params.find("position");
+    if (search == params.end()) {
+        return muse::make_ret(muse::Ret::Code::UnknownError);
+    }
+
+    return playbackController()->rewind(secs_t(search->second.toDouble()));
 }
 
 muse::Ret PlaybackCommandsController::showPlaybackSetup()

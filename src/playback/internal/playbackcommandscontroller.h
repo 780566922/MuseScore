@@ -58,6 +58,7 @@ public:
 private:
 
     muse::Ret rewind(const muse::rcommand::Params& params);
+    muse::Ret seekTo(const muse::rcommand::Params& params);
     muse::Ret showPlaybackSetup();
 
     muse::Ret attachAudioClip(const muse::rcommand::Params& params);

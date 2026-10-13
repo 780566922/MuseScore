@@ -74,6 +74,7 @@ class AudioClipTrackView : public QQuickPaintedItem, public muse::Contextable, p
     Q_PROPERTY(QColor barLineColor READ barLineColor WRITE setBarLineColor NOTIFY appearanceChanged)
     Q_PROPERTY(QColor beatLineColor READ beatLineColor WRITE setBeatLineColor NOTIFY appearanceChanged)
     Q_PROPERTY(QColor markerColor READ markerColor WRITE setMarkerColor NOTIFY appearanceChanged)
+    Q_PROPERTY(QColor labelColor READ labelColor WRITE setLabelColor NOTIFY appearanceChanged)
     Q_PROPERTY(QColor playbackCursorColor READ playbackCursorColor WRITE setPlaybackCursorColor NOTIFY appearanceChanged)
 
     muse::ContextInject<IAudioClipWaveProvider> waveProvider = { this };
@@ -100,6 +101,8 @@ public:
     void setBeatLineColor(const QColor& color);
     QColor markerColor() const;
     void setMarkerColor(const QColor& color);
+    QColor labelColor() const;
+    void setLabelColor(const QColor& color);
     QColor playbackCursorColor() const;
     void setPlaybackCursorColor(const QColor& color);
 
@@ -160,6 +163,7 @@ private:
 
     void paintMarks(QPainter* painter, const std::vector<int>& ticks, const QColor& color,
                     double lineWidth, double inset) const;
+    void paintBarNumbers(QPainter* painter) const;
     void paintWave(QPainter* painter, double clipStart, double clipEnd);
     void paintOffScoreMarker(QPainter* painter, double x, bool pointingLeft) const;
     void paintPlaybackCursor(QPainter* painter) const;
@@ -167,7 +171,12 @@ private:
 
     void onPlayingChanged();
     void updatePlaybackCursorInterpolated();
+    void syncPlaybackTick();
     void ensurePlaybackTickVisible(int tick);
+
+    //! Where the score is played from is moved to the tick asked for, which is
+    //! how a place picked out on the track becomes the place play starts at.
+    void seekToTick(int tick);
 
     AudioClipWave m_wave;
 
@@ -183,6 +192,7 @@ private:
     bool m_viewInitialised = false;
 
     std::vector<int> m_barTicks;
+    std::vector<int> m_barNumbers;
     std::vector<int> m_beatTicks;
 
     QColor m_backgroundColor = QColor(38, 38, 38);
@@ -191,6 +201,7 @@ private:
     QColor m_barLineColor = QColor(150, 150, 150);
     QColor m_beatLineColor = QColor(85, 85, 85);
     QColor m_markerColor = QColor(224, 96, 96);
+    QColor m_labelColor = QColor(170, 170, 170);
     QColor m_playbackCursorColor = QColor(76, 175, 80);
 
     DragMode m_dragMode = DragMode::None;
@@ -213,6 +224,14 @@ private:
     muse::audio::secs_t m_lastPlaybackPosition = 0.0;
     qint64 m_lastPlaybackPositionUpdateTimeNs = 0;
     int m_playbackTick = 0;
-    bool m_playbackCursorVisible = false;
+    //! NOTE The view is carried along with the playhead unless the view has been
+    //! slid somewhere of its own accord, in which case it is left where it was
+    //! put until playing starts again.
+    bool m_followPlayback = true;
+    //! NOTE The score's own cursor is only drawn while the score is being played,
+    //! but this one is where the score is to be played from, which is worth
+    //! knowing whether it is being played or not: it stays put on being stopped,
+    //! and it is moved by picking a place out on the track.
+    bool m_playbackCursorVisible = true;
 };
 }

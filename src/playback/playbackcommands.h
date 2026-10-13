@@ -49,6 +49,9 @@ inline static const muse::rcommand::Command CLEAR_ONLINESOUNDS_CACHE_COMMAND("co
 inline static const muse::rcommand::Command PROCESS_ONLINESOUNDS_COMMAND("command://playback/process-onlinesounds");
 inline static const muse::rcommand::Command RELOAD_PLAYBACK_CACHE_COMMAND("command://playback/reload-playback-cache");
 
+//! Where the score is played from is moved to the given position, in seconds.
+inline static const muse::rcommand::Command SEEK_TO_COMMAND("command://playback/seek-to"); // with params
+
 inline static const muse::rcommand::Command ATTACH_AUDIO_CLIP_COMMAND("command://playback/attach-audio-clip"); // with params
 inline static const muse::rcommand::Command DETACH_AUDIO_CLIP_COMMAND("command://playback/detach-audio-clip");
 inline static const muse::rcommand::Command MOVE_AUDIO_CLIP_COMMAND("command://playback/move-audio-clip"); // with params

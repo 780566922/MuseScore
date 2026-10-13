@@ -216,6 +216,14 @@ static const std::vector<CommandInfo> s_commandInfos = {
     },
 
     CommandInfo{
+        SEEK_TO_COMMAND,
+        TranslatableString("playback", "Seek to a position"),
+        TranslatableString("playback", "Play the score from the given position"),
+        InputSchema({ { "position", Arg(DataType::Float, u"Playback position in seconds", Val(0)) } }),
+        Decoration()
+    },
+
+    CommandInfo{
         TOGGLE_MIXER_SECTION_COMMAND,
         TranslatableString("playback", "Toggle mixer section"),
         TranslatableString("playback", "Toggle mixer section"),

@@ -78,6 +78,13 @@ void AudioClipTrackView::componentComplete()
             state->playbackPositionChanged().onReceive(this, [this](const muse::audio::secs_t secs) {
                 m_lastPlaybackPosition = secs;
                 m_lastPlaybackPositionUpdateTimeNs = m_elapsedTimer.nsecsElapsed();
+
+                //! NOTE Nothing is carrying the playhead along by the clock while
+                //! the score is stopped, so a seek from anywhere else - the score
+                //! above, or this track - is taken as it comes.
+                if (!m_playbackCursorTimer.isActive()) {
+                    syncPlaybackTick();
+                }
             }, Asyncable::Mode::SetReplace);
 
             state->playbackStatusChanged().onReceive(this, [this](const muse::audio::PlaybackStatus) {
@@ -99,6 +106,7 @@ void AudioClipTrackView::rebuild()
 {
     m_wave = AudioClipWave();
     m_barTicks.clear();
+    m_barNumbers.clear();
     m_beatTicks.clear();
     m_dragMode = DragMode::None;
     m_dragDeltaTicks = 0;
@@ -122,6 +130,11 @@ void AudioClipTrackView::rebuild()
 
         m_barTicks.push_back(from);
 
+        //! NOTE The number written at a bar line is the one the score itself
+        //! writes over that measure, so the two can be told off against one
+        //! another.
+        m_barNumbers.push_back(measure->measureNumber() + 1);
+
         //! NOTE A beat is a beat of the time signature: an eighth in 6/8, say,
         //! and a quarter in 4/4. A measure that has not been given one is drawn
         //! in quarters, the way it is read.
@@ -137,6 +150,7 @@ void AudioClipTrackView::rebuild()
 
     if (!m_barTicks.empty()) {
         m_barTicks.push_back(m_scoreEndTick);
+        m_barNumbers.push_back(m_barNumbers.back() + 1);
     }
 
     const int clipStart = m_wave.isValid() ? m_wave.startTick : 0;
@@ -165,6 +179,8 @@ void AudioClipTrackView::rebuild()
     m_viewInitialised = true;
 
     m_waveDirty = true;
+
+    syncPlaybackTick();
 
     emit hasClipChanged();
     update();
@@ -334,6 +350,7 @@ void AudioClipTrackView::paint(QPainter* painter)
     //! when the clip is lined up.
     paintMarks(painter, m_beatTicks, m_beatLineColor, 1.0, height() * 0.30);
     paintMarks(painter, m_barTicks, m_barLineColor, 1.0, 0.0);
+    paintBarNumbers(painter);
 
     if (!m_wave.isValid()) {
         paintPlaybackCursor(painter);
@@ -414,6 +431,44 @@ void AudioClipTrackView::paintMarks(QPainter* painter, const std::vector<int>& t
 
     painter->setPen(QPen(color, lineWidth));
     painter->drawLines(lines);
+}
+
+void AudioClipTrackView::paintBarNumbers(QPainter* painter) const
+{
+    if (m_barTicks.empty() || width() < 40.0) {
+        return;
+    }
+
+    //! NOTE Too many numbers to tell apart is worse than none, so they are only
+    //! written where there is room between one bar line and the next to read them.
+    const double leastGap = 24.0;
+
+    const auto first = std::lower_bound(m_barTicks.begin(), m_barTicks.end(), m_viewFromTick);
+    const size_t firstIndex = size_t(std::distance(m_barTicks.begin(), first));
+
+    QFont font = painter->font();
+    font.setPixelSize(9);
+    painter->setFont(font);
+    painter->setPen(m_labelColor);
+
+    double lastX = -1e9;
+
+    for (size_t index = firstIndex; index < m_barTicks.size(); ++index) {
+        const double x = xForTick(double(m_barTicks[index]));
+
+        if (x > double(width())) {
+            break;
+        }
+
+        if (x < 0.0 || x - lastX < leastGap) {
+            continue;
+        }
+
+        lastX = x;
+
+        painter->drawText(QRectF(x + 2.0, 1.0, 40.0, height() * 0.5),
+                          Qt::AlignLeft | Qt::AlignTop, QString::number(m_barNumbers[index]));
+    }
 }
 
 void AudioClipTrackView::paintWave(QPainter* painter, double clipStart, double clipEnd)
@@ -544,6 +599,7 @@ void AudioClipTrackView::mousePressEvent(QMouseEvent* event)
         m_dragMode = DragMode::PanView;
         m_dragStartX = event->position().x();
         m_dragStartViewFromTick = m_viewFromTick;
+        m_followPlayback = false;
         setCursor(Qt::ClosedHandCursor);
     }
 
@@ -594,6 +650,13 @@ void AudioClipTrackView::mouseReleaseEvent(QMouseEvent* event)
     }
 
     const bool movedClip = m_dragMode == DragMode::MoveClip;
+
+    //! NOTE A drag that went nowhere is a click, and a click on the track picks
+    //! out where the score is to be played from, which is the whole point of
+    //! being able to point at a stretch of the audio and say "from here".
+    const bool pickedAPlace = m_dragMode == DragMode::PanView
+                              && std::abs(event->position().x() - m_dragStartX) <= 3.0;
+
     const int tick = m_wave.startTick + m_dragDeltaTicks;
 
     m_dragMode = DragMode::None;
@@ -607,6 +670,8 @@ void AudioClipTrackView::mouseReleaseEvent(QMouseEvent* event)
     //! PlaybackCommandsController::moveAudioClip.
     if (movedClip && actionsDispatcher()) {
         actionsDispatcher()->dispatch("move-audio-clip", muse::actions::ActionData::make_arg1<int>(tick));
+    } else if (pickedAPlace) {
+        seekToTick(int(std::lround(tickForX(event->position().x()))));
     }
 
     update();
@@ -658,6 +723,7 @@ void AudioClipTrackView::wheelEvent(QWheelEvent* event)
                              ? double(pixelDelta.x() != 0 ? pixelDelta.x() : pixelDelta.y())
                              : double(angleDelta.x() != 0 ? angleDelta.x() : angleDelta.y()) / 4.0;
 
+        m_followPlayback = false;
         scrollByPixels(-delta);
     } else {
         const double steps = double(angleDelta.y()) / 120.0;
@@ -707,7 +773,11 @@ void AudioClipTrackView::onPlayingChanged()
     const auto state = globalContext() ? globalContext()->playbackState() : nullptr;
     const bool playing = state && state->isPlaying();
 
-    m_playbackCursorVisible = playing;
+    //! NOTE The playhead is not hidden on being stopped: unlike the score's own
+    //! cursor, it says where playing is to start from, which is as much wanted
+    //! while the score is stopped as while it is being played.
+    m_playbackCursorVisible = true;
+    m_followPlayback = true;
 
     if (playing) {
         m_lastPlaybackPosition = state->playbackPosition();
@@ -717,7 +787,48 @@ void AudioClipTrackView::onPlayingChanged()
         m_playbackCursorTimer.start();
     } else {
         m_playbackCursorTimer.stop();
+        syncPlaybackTick();
         update();
+    }
+}
+
+void AudioClipTrackView::syncPlaybackTick()
+{
+    const auto state = globalContext() ? globalContext()->playbackState() : nullptr;
+
+    const INotationPtr notation = globalContext() ? globalContext()->currentNotation() : nullptr;
+    const INotationPlaybackPtr playback = notation && notation->masterNotation()
+                                          ? notation->masterNotation()->playback()
+                                          : nullptr;
+
+    if (!state || !playback) {
+        return;
+    }
+
+    m_playbackTick = playback->secToTick(state->playbackPosition());
+}
+
+void AudioClipTrackView::seekToTick(int tick)
+{
+    const INotationPtr notation = globalContext() ? globalContext()->currentNotation() : nullptr;
+    const INotationPlaybackPtr playback = notation && notation->masterNotation()
+                                          ? notation->masterNotation()->playback()
+                                          : nullptr;
+
+    //! NOTE The track is laid out by the tick the score is written in, but where
+    //! playing is moved to is a time, and repeats mean the two are not the same
+    //! sum: the score's own playback model is asked to take one into the other.
+    if (playback) {
+        const muse::RetVal<muse::midi::tick_t> playedTick = playback->playPositionTickByRawTick(tick);
+        const double secs = playedTick.ret ? double(playback->playedTickToSec(playedTick.val)) : 0.0;
+
+        m_playbackTick = tick;
+        m_followPlayback = true;
+        update();
+
+        if (actionsDispatcher()) {
+            actionsDispatcher()->dispatch("seek-to", muse::actions::ActionData::make_arg1<double>(secs));
+        }
     }
 }
 
@@ -751,6 +862,10 @@ void AudioClipTrackView::updatePlaybackCursorInterpolated()
 
 void AudioClipTrackView::ensurePlaybackTickVisible(int tick)
 {
+    if (!m_followPlayback) {
+        return;
+    }
+
     const double span = double(m_viewToTick - m_viewFromTick);
     if (span <= 0.0) {
         return;
@@ -870,6 +985,22 @@ void AudioClipTrackView::setMarkerColor(const QColor& color)
     }
 
     m_markerColor = color;
+    update();
+    emit appearanceChanged();
+}
+
+QColor AudioClipTrackView::labelColor() const
+{
+    return m_labelColor;
+}
+
+void AudioClipTrackView::setLabelColor(const QColor& color)
+{
+    if (m_labelColor == color) {
+        return;
+    }
+
+    m_labelColor = color;
     update();
     emit appearanceChanged();
 }

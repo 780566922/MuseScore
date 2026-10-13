@@ -42,6 +42,7 @@ Item {
         barLineColor: ui.theme.strokeColor
         beatLineColor: ui.theme.buttonColor
         markerColor: ui.theme.accentColor
+        labelColor: ui.theme.fontPrimaryColor
         playbackCursorColor: ui.theme.accentColor
     }
 
