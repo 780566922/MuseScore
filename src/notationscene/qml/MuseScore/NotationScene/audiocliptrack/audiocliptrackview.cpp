@@ -312,11 +312,11 @@ void AudioClipTrackView::zoomToFit()
     setViewRange(m_contentFromTick, m_contentToTick);
 }
 
-float AudioClipTrackView::peakBetween(int firstTick, int lastTick) const
+void AudioClipTrackView::envelopeBetween(int firstTick, int lastTick, float& peak, float& trough, float& rms) const
 {
     const int span = m_wave.endTick - m_wave.startTick;
     if (span <= 0 || m_wave.peaks.empty()) {
-        return 0.f;
+        return;
     }
 
     //! NOTE The clip is drawn where the drag has put it, but its values are
@@ -328,12 +328,26 @@ float AudioClipTrackView::peakBetween(int firstTick, int lastTick) const
     const size_t first = std::clamp(size_t(std::floor(from * double(count))), size_t(0), count - 1);
     const size_t last = std::clamp(size_t(std::ceil(to * double(count))), first + 1, count);
 
-    float peak = 0.f;
+    double sumOfSquares = 0.0;
+    size_t values = 0;
+
     for (size_t index = first; index < last; ++index) {
         peak = std::max(peak, m_wave.peaks[index]);
+
+        if (index < m_wave.troughs.size()) {
+            trough = std::min(trough, m_wave.troughs[index]);
+        }
+
+        //! NOTE Loudness is not a greatest-of, the way a swing is: however many
+        //! stretches of the clip one pixel of the track stands for, it is as loud
+        //! as the square mean of them all.
+        if (index < m_wave.rmses.size()) {
+            sumOfSquares += double(m_wave.rmses[index]) * double(m_wave.rmses[index]);
+            ++values;
+        }
     }
 
-    return peak;
+    rms = values > 0 ? float(std::sqrt(sumOfSquares / double(values))) : 0.f;
 }
 
 void AudioClipTrackView::paint(QPainter* painter)
@@ -345,10 +359,11 @@ void AudioClipTrackView::paint(QPainter* painter)
         return;
     }
 
-    //! NOTE The beats are drawn faintly and the measures plainly, and the wave
-    //! over both: it is where the measures fall that has to be found at a glance
-    //! when the clip is lined up.
-    paintMarks(painter, m_beatTicks, m_beatLineColor, 1.0, height() * 0.30);
+    //! NOTE The beats are drawn as a dotted grid over the whole height of the
+    //! track, so that each beat is a cell the wave can be read off, and the
+    //! measures plainly over that: it is where the measures fall that has to be
+    //! found at a glance when the clip is lined up.
+    paintMarks(painter, m_beatTicks, m_beatLineColor, 1.0, 0.0, Qt::DotLine);
     paintMarks(painter, m_barTicks, m_barLineColor, 1.0, 0.0);
     paintBarNumbers(painter);
 
@@ -394,7 +409,7 @@ void AudioClipTrackView::paint(QPainter* painter)
 }
 
 void AudioClipTrackView::paintMarks(QPainter* painter, const std::vector<int>& ticks,
-                                    const QColor& color, double lineWidth, double inset) const
+                                    const QColor& color, double lineWidth, double inset, Qt::PenStyle style) const
 {
     //! NOTE A score long enough, or a zoom far enough out, for the marks to fall
     //! closer together than they can be told apart is drawn without them, rather
@@ -429,7 +444,9 @@ void AudioClipTrackView::paintMarks(QPainter* painter, const std::vector<int>& t
         return;
     }
 
-    painter->setPen(QPen(color, lineWidth));
+    QPen pen(color, lineWidth);
+    pen.setStyle(style);
+    painter->setPen(pen);
     painter->drawLines(lines);
 }
 
@@ -471,44 +488,107 @@ void AudioClipTrackView::paintBarNumbers(QPainter* painter) const
     }
 }
 
+void AudioClipTrackView::buildWavePaths(double clipStart, double clipEnd)
+{
+    m_wavePath = QPainterPath();
+    m_waveBodyPath = QPainterPath();
+
+    if (!m_wave.isValid() || width() <= 0.0) {
+        return;
+    }
+
+    const double centerY = height() * 0.5;
+    const double maxAmplitude = height() * 0.44;
+    const double minAmplitude = 0.5;
+
+    const double from = std::max(xForTick(clipStart), 0.0);
+    const double to = std::min(xForTick(clipEnd), double(width()));
+
+    const int points = int(std::ceil(to - from));
+    if (points < 1) {
+        return;
+    }
+
+    //! NOTE One point per pixel of the track, each of them the furthest the
+    //! clip swings either way over the stretch it stands for: a hit is then as
+    //! tall as it is loud however far the track has been zoomed out, and it
+    //! cannot fall between two points and be lost.
+    QVector<QPointF> tops(points);
+    QVector<QPointF> bottoms(points);
+    QVector<QPointF> bodyTops(points);
+    QVector<QPointF> bodyBottoms(points);
+
+    for (int point = 0; point < points; ++point) {
+        const double x = from + double(point);
+        const int firstTick = int(std::floor(tickForX(x)));
+        const int lastTick = int(std::ceil(tickForX(std::min(x + 1.0, to))));
+
+        float peak = 0.f;
+        float trough = 0.f;
+        float rms = 0.f;
+        envelopeBetween(firstTick, lastTick, peak, trough, rms);
+
+        const double up = std::max(double(peak) * maxAmplitude, minAmplitude);
+        const double down = std::max(double(-trough) * maxAmplitude, minAmplitude);
+        const double body = std::max(double(rms) * maxAmplitude, minAmplitude);
+
+        tops[point] = QPointF(x, centerY - up);
+        bottoms[point] = QPointF(x, centerY + down);
+        bodyTops[point] = QPointF(x, centerY - body);
+        bodyBottoms[point] = QPointF(x, centerY + body);
+    }
+
+    //! NOTE The wave is drawn as one closed shape rather than as a line per
+    //! pixel: an outline run along the tops and back along the bottoms, which
+    //! is what lets it be filled and smoothed, so that it reads as a wave and
+    //! not as a row of blocks.
+    m_wavePath.moveTo(tops.first());
+    for (int point = 1; point < points; ++point) {
+        m_wavePath.lineTo(tops[point]);
+    }
+    for (int point = points - 1; point >= 0; --point) {
+        m_wavePath.lineTo(bottoms[point]);
+    }
+    m_wavePath.closeSubpath();
+
+    m_waveBodyPath.moveTo(bodyTops.first());
+    for (int point = 1; point < points; ++point) {
+        m_waveBodyPath.lineTo(bodyTops[point]);
+    }
+    for (int point = points - 1; point >= 0; --point) {
+        m_waveBodyPath.lineTo(bodyBottoms[point]);
+    }
+    m_waveBodyPath.closeSubpath();
+}
+
 void AudioClipTrackView::paintWave(QPainter* painter, double clipStart, double clipEnd)
 {
     //! NOTE The playhead asks to be drawn many times a second, and the wave does
     //! not change at all while it moves, so the wave is drawn once and kept until
     //! the view, the clip or the track itself has changed under it.
     if (m_waveDirty) {
-        m_waveLines.clear();
-
-        const double centerY = height() * 0.5;
-        const double maxAmplitude = height() * 0.44;
-        const double minAmplitude = 0.5;
-
-        const double from = std::max(xForTick(clipStart), 0.0);
-        const double to = std::min(xForTick(clipEnd), double(width()));
-
-        //! NOTE One point per pixel of the track, and each of them is the loudest
-        //! of the stretch of the clip it stands for: a hit is then as tall as it
-        //! is loud however far the track has been zoomed out, and it cannot fall
-        //! between two points and be lost.
-        for (double x = from; x < to; x += 1.0) {
-            const int firstTick = int(std::floor(tickForX(x)));
-            const int lastTick = int(std::ceil(tickForX(std::min(x + 1.0, to))));
-
-            const float peak = peakBetween(firstTick, lastTick);
-            const double amplitude = std::max(double(peak) * maxAmplitude, minAmplitude);
-
-            m_waveLines.append(QLineF(x, centerY - amplitude, x, centerY + amplitude));
-        }
-
+        buildWavePaths(clipStart, clipEnd);
         m_waveDirty = false;
     }
 
-    if (m_waveLines.isEmpty()) {
+    if (m_wavePath.isEmpty()) {
         return;
     }
 
-    painter->setPen(QPen(m_waveColor, 1.0));
-    painter->drawLines(m_waveLines);
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setPen(Qt::NoPen);
+
+    QColor outline = m_waveColor;
+    outline.setAlpha(110);
+    painter->setBrush(outline);
+    painter->drawPath(m_wavePath);
+
+    QColor body = m_waveColor;
+    body.setAlpha(230);
+    painter->setBrush(body);
+    painter->drawPath(m_waveBodyPath);
+
+    painter->setRenderHint(QPainter::Antialiasing, false);
 }
 
 void AudioClipTrackView::paintOffScoreMarker(QPainter* painter, double x, bool pointingLeft) const

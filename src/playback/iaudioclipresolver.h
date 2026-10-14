@@ -31,11 +31,19 @@
 
 namespace mu::playback {
 //! The part of an audio clip that is heard, in the shape it is drawn in.
+//!
+//! A wave drawn from loudness alone comes out as a band of even height, which
+//! says nothing about the shape of the sound; so each stretch is told three
+//! ways: how far it swings up, how far it swings down, and how loud it is on
+//! the average. The first two are what give the wave its outline, and the last
+//! is what gives it a body, the way a wave is drawn in an editor.
 struct AudioClipEnvelope {
     double fromSec = 0.0;            //! where the part that is heard begins inside the clip
     double toSec = 0.0;              //! where it ends
     double totalSec = 0.0;           //! how long the whole clip is
-    std::vector<float> peaks;        //! envelope of the part that is heard, in [0, 1]
+    std::vector<float> peaks;        //! furthest the wave swings up, in [0, 1]
+    std::vector<float> troughs;      //! furthest it swings down, in [-1, 0]
+    std::vector<float> rmses;        //! loudness on the average, in [0, 1]
 
     bool isValid() const { return toSec > fromSec && !peaks.empty(); }
 };
@@ -65,9 +73,10 @@ public:
     virtual void clearClipData(const muse::audio::AudioResourceId& id) = 0;
 
     //! The envelope of a clip handed over earlier, for drawing it on the score.
-    //! `envelope.peaks` receives `bucketCount` values in [0, 1] spread over the
-    //! part of the clip between `inSec` and `outSec`; a negative `outSec` means
-    //! "to the end of the clip". Returns false if there is no such clip.
+    //! `envelope.peaks`, `envelope.troughs` and `envelope.rmses` each receive
+    //! `bucketCount` values spread over the part of the clip between `inSec` and
+    //! `outSec`; a negative `outSec` means "to the end of the clip". Returns
+    //! false if there is no such clip.
     virtual bool clipEnvelope(const muse::audio::AudioResourceId& id, muse::secs_t inSec, muse::secs_t outSec,
                               size_t bucketCount, AudioClipEnvelope& envelope) const = 0;
 

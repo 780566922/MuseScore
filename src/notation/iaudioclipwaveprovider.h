@@ -32,7 +32,9 @@ namespace mu::notation {
 struct AudioClipWave {
     int startTick = 0;          //! where on the score the clip starts
     int endTick = 0;            //! where on the score the part that is heard ends
-    std::vector<float> peaks;   //! envelope of the part that is heard, in [0, 1]
+    std::vector<float> peaks;   //! furthest the wave swings up, in [0, 1]
+    std::vector<float> troughs; //! furthest it swings down, in [-1, 0]
+    std::vector<float> rmses;   //! loudness on the average, in [0, 1]
 
     bool isValid() const { return !peaks.empty() && endTick > startTick; }
 };

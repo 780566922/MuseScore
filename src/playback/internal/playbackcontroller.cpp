@@ -1544,7 +1544,7 @@ void PlaybackController::setupAudioClipTrack()
     //! NOTE The engine resolves the source while the track is being added, so
     //! the clip has to be decoded and handed over beforehand; doing it later
     //! would be ignored.
-    audioClipResolver()->setClipData(resourceId, data, playedTickToSecs(clip.startTick), clip.inOffset, clip.outOffset);
+    audioClipResolver()->setClipData(resourceId, data, audioClipStartSec(clip.startTick), clip.inOffset, clip.outOffset);
 
     AudioResourceMeta meta;
     meta.id = resourceId;
@@ -1574,6 +1574,23 @@ void PlaybackController::setupAudioClipTrack()
     //! been built before this ran; there being no guarantee about which of the
     //! two comes first, whoever draws it is told again here.
     m_clipWaveChanged.notify();
+}
+
+muse::audio::secs_t PlaybackController::audioClipStartSec(int startTick) const
+{
+    const mu::notation::INotationPlaybackPtr playback = notationPlayback();
+    if (!playback) {
+        return 0.0;
+    }
+
+    //! NOTE Where the clip is lined up is a tick of the score as it is written,
+    //! but what it is played along to is the score as it is played: with a
+    //! repeat before that tick the two are not the same number, and taking one
+    //! for the other brings the clip in a repeat too soon.
+    const muse::RetVal<muse::midi::tick_t> playedTick = playback->playPositionTickByRawTick(startTick);
+    const muse::midi::tick_t tick = playedTick.ret ? playedTick.val : startTick;
+
+    return playedTickToSecs(int(tick));
 }
 
 muse::Ret PlaybackController::attachAudioClip(const muse::io::path_t& path)
@@ -1675,7 +1692,7 @@ mu::notation::AudioClipWave PlaybackController::clipWave(size_t bucketCount) con
         return wave;
     }
 
-    const double startSec = playedTickToSecs(clip.startTick);
+    const double startSec = audioClipStartSec(clip.startTick);
     const double endSec = startSec + (envelope.toSec - envelope.fromSec);
 
     //! NOTE Where the clip starts is taken from the clip itself rather than
@@ -1686,6 +1703,8 @@ mu::notation::AudioClipWave PlaybackController::clipWave(size_t bucketCount) con
     wave.startTick = clip.startTick;
     wave.endTick = clip.startTick + int(playback->secToTick(endSec) - playback->secToTick(startSec));
     wave.peaks = std::move(envelope.peaks);
+    wave.troughs = std::move(envelope.troughs);
+    wave.rmses = std::move(envelope.rmses);
 
     return wave;
 }
@@ -1830,6 +1849,15 @@ void PlaybackController::subscribeOnAudioParamsChanges()
         removeAudioClipTrack();
         setupAudioClipTrack();
         m_clipWaveChanged.notify();
+    });
+
+    //! NOTE Where the clip is heard from is worked out from the score as it is
+    //! played, and playing the repeats or not gives a different score to play
+    //! along to, so turning them on or off moves the clip and the track has to
+    //! be built again for it to be heard from the new place.
+    notationConfiguration()->isPlayRepeatsChanged().onNotify(this, [this]() {
+        removeAudioClipTrack();
+        setupAudioClipTrack();
     });
 }
 

@@ -227,6 +227,9 @@ private:
     void setupPlayback();
     void setupAudioClipTrack();
     void removeAudioClipTrack();
+    //! Where on the timeline the clip is to be heard, from the tick of the
+    //! score it is lined up with.
+    muse::audio::secs_t audioClipStartSec(int startTick) const;
     void subscribeOnAudioParamsChanges();
     void setupTracks();
     void setupPlayer();

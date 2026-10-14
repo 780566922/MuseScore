@@ -20,6 +20,7 @@
 
 #include <QColor>
 #include <QElapsedTimer>
+#include <QPainterPath>
 #include <QQuickPaintedItem>
 #include <QTimer>
 #include <qqmlintegration.h>
@@ -158,13 +159,15 @@ private:
     double xForTick(double tick) const;
     double tickForX(double x) const;
 
-    //! The loudest the clip gets between two of the track's ticks.
-    float peakBetween(int firstTick, int lastTick) const;
+    //! How far the clip swings, and how loud it is, between two of the track's
+    //! ticks: `trough` comes back negative or nothing, the rest positive.
+    void envelopeBetween(int firstTick, int lastTick, float& peak, float& trough, float& rms) const;
 
     void paintMarks(QPainter* painter, const std::vector<int>& ticks, const QColor& color,
-                    double lineWidth, double inset) const;
+                    double lineWidth, double inset, Qt::PenStyle style = Qt::SolidLine) const;
     void paintBarNumbers(QPainter* painter) const;
     void paintWave(QPainter* painter, double clipStart, double clipEnd);
+    void buildWavePaths(double clipStart, double clipEnd);
     void paintOffScoreMarker(QPainter* painter, double x, bool pointingLeft) const;
     void paintPlaybackCursor(QPainter* painter) const;
     void paintViewOverview(QPainter* painter) const;
@@ -217,7 +220,12 @@ private:
     //! it depends on has changed: the playhead moves many times a second, and the
     //! wave does not, so it is not asked to keep up with it.
     bool m_waveDirty = true;
-    QVector<QLineF> m_waveLines;
+    //! The outline of the wave, and the body of it: the first is drawn from how
+    //! far the clip swings either way, the second from how loud it is on the
+    //! average, which is what makes a loud hit read as a solid one and a quiet
+    //! stretch as a thin one.
+    QPainterPath m_wavePath;
+    QPainterPath m_waveBodyPath;
 
     QTimer m_playbackCursorTimer;
     QElapsedTimer m_elapsedTimer;

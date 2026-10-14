@@ -50,7 +50,9 @@ public:
     //! A coarse envelope of a decoded clip, kept so that the clip can be drawn
     //! on the score without decoding it again for every repaint.
     struct Envelope {
-        std::vector<float> peaks;    //! one peak per `bucketSecs` of the clip
+        std::vector<float> peaks;    //! one value per `bucketSecs` of the clip, in [0, 1]
+        std::vector<float> troughs;  //! likewise, the swing downwards, in [-1, 0]
+        std::vector<float> rmses;    //! likewise, the loudness on the average, in [0, 1]
         double bucketSecs = 0.0;
         double totalSec = 0.0;
 
