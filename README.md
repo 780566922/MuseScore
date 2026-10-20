@@ -8,7 +8,9 @@
 > - 🌿 功能代码在分支 [`feat/audio-track`](https://github.com/780566922/MuseScore/tree/feat/audio-track)；音频解码放在子模块 `muse_framework` 的 `feat/audio-file-source`
 > - 📖 功能与从源码编译的说明：[AUDIO_TRACK.md](https://github.com/780566922/MuseScore/blob/feat/audio-track/AUDIO_TRACK.md)
 >
-> ⚠️ **已知限制**：生成的 `.mscz` 为 5.0 格式，官方 MuseScore 4.x 打不开；目前仅提供 arm64（Apple Silicon）版本。
+> ⚠️ **已知限制**：生成的 `.mscz` 为 5.0 格式，官方 MuseScore 4.x 打不开。
+>
+> 💻 目前仅发布 **arm64（Apple Silicon）** 版本；如需 Intel / 通用版等其他架构，请按 [AUDIO_TRACK.md](https://github.com/780566922/MuseScore/blob/feat/audio-track/AUDIO_TRACK.md) 自行编译。
 
 ---
 
