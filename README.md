@@ -1,3 +1,17 @@
+> ⚠️ **这是带「原生音频轨」功能的 MuseScore fork（非官方版本）。**
+> *This is an unofficial MuseScore fork that adds a native **audio track** feature.*
+>
+> 相比官方 MuseScore，本 fork 多了一件事：可以把音频文件直接拖进乐谱，成为一条独立的**音频轨**——
+> 按拍号 + BPM 做成静态对齐网格、在底部 Audio 面板画出波形与每拍虚线、可拖动做偏移，支持 **WAV / MP3 / Ogg / FLAC / M4A(AAC)**。
+>
+> - 📦 **已经编好、可直接用的成品（仅 Apple Silicon）**：见 [Releases · audio-track-v1](https://github.com/780566922/MuseScore/releases/tag/audio-track-v1)（下载 DMG → 拖进「应用程序」即可）
+> - 🌿 功能代码在分支 [`feat/audio-track`](https://github.com/780566922/MuseScore/tree/feat/audio-track)；音频解码放在子模块 `muse_framework` 的 `feat/audio-file-source`
+> - 📖 功能与从源码编译的说明：[AUDIO_TRACK.md](https://github.com/780566922/MuseScore/blob/feat/audio-track/AUDIO_TRACK.md)
+>
+> ⚠️ **已知限制**：生成的 `.mscz` 为 5.0 格式，官方 MuseScore 4.x 打不开；目前仅提供 arm64（Apple Silicon）版本。
+
+---
+
 # ![MuseScore Studio](share/icons/musescore_logo_full.png)
 
 Music notation and composition software
