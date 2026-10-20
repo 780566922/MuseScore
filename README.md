@@ -10,7 +10,7 @@
 >
 > ⚠️ **已知限制**：生成的 `.mscz` 为 5.0 格式，官方 MuseScore 4.x 打不开。
 >
-> 💻 目前仅发布 **arm64（Apple Silicon）** 版本；如需 Intel / 通用版等其他架构，请按 [AUDIO_TRACK.md](https://github.com/780566922/MuseScore/blob/feat/audio-track/AUDIO_TRACK.md) 自行编译。
+> 💻 代码是**跨平台**的（Windows / Linux / macOS 都能编），音频解码无任何 macOS 专属依赖；目前只发布了 macOS **arm64** 成品，只是因为作者在 Mac 上构建。如需 Windows / Linux / Intel 版本，或想看编译步骤，见 [AUDIO_TRACK.md](https://github.com/780566922/MuseScore/blob/feat/audio-track/AUDIO_TRACK.md) 的「自己编译」一节。
 
 ---
 
